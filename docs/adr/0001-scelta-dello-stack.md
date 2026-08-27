@@ -2,10 +2,7 @@
 
 ## Stato
 
-Proposto
-<!-- L'architettura PWA + backend + Postgres è consolidata; le specifiche
-     scelte di framework (React vs Svelte, NestJS vs Node "puro") sono default
-     ragionevoli ancora da confermare. -->
+Accettato
 
 ## Contesto
 

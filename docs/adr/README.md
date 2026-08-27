@@ -13,7 +13,7 @@ stato scelto e — soprattutto — **perché**.
 
 | N.   | Titolo                                                             | Stato     |
 |------|--------------------------------------------------------------------|-----------|
-| 0001 | [Scelta dello stack tecnologico](0001-scelta-dello-stack.md)       | Proposto  |
-| 0002 | [Deploy su VPS con Docker](0002-deploy-vps-docker.md)  | Accettato |
+| 0001 | [Scelta dello stack tecnologico](0001-scelta-dello-stack.md)       | Accettato |
+| 0002 | [Deploy su VPS con Docker](0002-deploy-vps-aruba-docker.md)  | Accettato |
 | 0003 | [Web Push per le notifiche di scadenza](0003-web-push-notifiche.md)| Accettato |
 | 0004 | [Sorgente dell'anagrafica marca-modello](0004-sorgente-anagrafica-marca-modello.md) | Proposto |

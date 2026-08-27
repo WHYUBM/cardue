@@ -21,25 +21,26 @@ locale.
 
 ## ⚠️ Decisioni NON ancora finalizzate
 
-Alcune scelte sono provvisorie. **Non trattarle come definitive e non costruirci
-sopra codice significativo senza prima confermarle con l'utente.**
+Lo stack è chiuso: gli ADR 0001, 0002 e 0003 sono **Accettati** (React+Vite,
+NestJS, PostgreSQL, Web Push, deploy su VPS con Docker). Su queste scelte puoi
+costruire senza chiedere conferma.
 
-- **Database**: PostgreSQL è indicato negli ADR, ma **non è confermato** —
-  l'utente sta ancora valutando. Se una task tocca la scelta del DB, proponi
-  opzioni e chiedi conferma prima di procedere.
-- **Framework**: React+Vite (frontend) e NestJS (backend) sono **default
-  ragionevoli, non scelte bloccate** (vedi ADR 0001, stato "Proposto").
-- **Fonte dataset marca-modello**: da scegliere (ADR 0004, "Proposto").
+Resta aperta una sola decisione:
+
+- **Fonte dataset marca-modello**: da scegliere (ADR 0004, stato "Proposto").
+  Prima di scrivere codice che dipende da una fonte specifica, proponi le
+  alternative e chiedi conferma.
 
 Regola generale: gli ADR con stato **"Proposto"** sono aperti. Prima di scrivere
 codice che dipende da una decisione "Proposto", segnalalo, proponi le alternative
-e aggiorna l'ADR (o creane uno nuovo) una volta deciso.
+e aggiorna l'ADR (o creane uno nuovo) una volta deciso, allineando l'indice in
+`docs/adr/README.md`.
 
-## Stack (allo stato attuale, da confermare dove indicato sopra)
+## Stack
 
-- Frontend: React + Vite, come PWA installabile — *proposto*
-- Backend: Node.js + NestJS, TypeScript — *proposto*
-- Database: PostgreSQL — *da confermare*
+- Frontend: React + Vite, come PWA installabile — *accettato*
+- Backend: Node.js + NestJS, TypeScript — *accettato*
+- Database: PostgreSQL — *accettato*
 - Notifiche: Web Push (VAPID) + cron giornaliero — *accettato*
 - Deploy: VPS Aruba + Docker Compose, reverse proxy con HTTPS — *accettato*
 - CI/CD: GitHub Actions — previsto più avanti

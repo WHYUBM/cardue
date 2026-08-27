@@ -1,8 +1,5 @@
 # Cardue
 
-> Il nome gioca su *car* + *due* (le scadenze che l'auto ti "deve") e richiama
-> il cardellino (*carduelis*).
-
 PWA per tenere sotto controllo le scadenze e la manutenzione della propria auto:
 bollo, assicurazione, revisione, tagliando e altri interventi periodici, con
 promemoria automatici prima di ogni scadenza.
@@ -58,38 +55,6 @@ graph TD
     Push -->|notifica| User
 ```
 
-## Roadmap di sviluppo
-
-L'approccio è quello del *walking skeleton*: prima una fetta end-to-end minima
-che funziona davvero, poi le feature vere. In ordine:
-
-- [ ] 1. Definire lo stack e il target di deploy (→ ADR 0001, 0002)
-- [ ] 2. Repo con README + primi ADR *(← sei qui)*
-- [ ] 3. Scheletro end-to-end in locale (aggiungo un'auto e la rivedo in lista)
-- [ ] 4. Dockerizzazione in locale (backend + Postgres in `docker-compose`)
-- [ ] 5. Primo deploy manuale sul VPS Aruba (SSH, firewall, reverse proxy + HTTPS)
-- [ ] 6. CI/CD con GitHub Actions (prima CI, poi deploy automatico)
-- [ ] 7. Iterazione sulle feature vere (scadenze, push, contributi utenti…)
-
-## Sviluppo in locale
-
-> Da compilare quando ci sarà il primo codice (passo 3 della roadmap).
-
-## Struttura del repository
-
-```
-.
-├── README.md
-├── docs/
-│   └── adr/            # Architecture Decision Records
-└── ...                 # frontend / backend / infra (in arrivo)
-```
-
-## Contribuire
-
-Il progetto accetterà contributi una volta avviato. I dati sui veicoli forniti
-dalla community sono soggetti al disclaimer qui sopra.
-
 ## Licenza
 
-Da definire (→ ADR futuro). Candidate tipiche: MIT o Apache 2.0.
+Da definire.

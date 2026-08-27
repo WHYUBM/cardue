@@ -57,4 +57,4 @@ graph TD
 
 ## Licenza
 
-Da definire.
+Questo progetto è rilasciato sotto la [MIT License](LICENSE.md).

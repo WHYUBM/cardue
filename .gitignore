@@ -83,3 +83,6 @@ desktop.ini
 tmp/
 temp/
 *.tgz
+
+# --- Documentazione locale (living document, non versionata) ---
+PROJECT_DOCS.md

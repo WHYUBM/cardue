@@ -28,8 +28,7 @@ condivisi).
 ## Decisione
 
 - **Frontend**: PWA con React + Vite.
-- **Backend**: Node.js con NestJS (struttura opinionata, buona per imparare
-  pattern usati in azienda).
+- **Backend**: Node.js con NestJS 
 - **Database**: PostgreSQL.
 - **Linguaggio**: TypeScript su tutto lo stack.
 
@@ -37,9 +36,5 @@ condivisi).
 
 - + Un solo codebase installabile su più piattaforme.
 - + TypeScript end-to-end: tipi condivisi tra frontend e backend.
-- + Stack molto diffuso → ottimo valore per il curriculum e tanta documentazione.
 - − Le Web Push su iOS funzionano solo da iOS 16.4 e solo con PWA aggiunta alla
     home (vedi ADR 0003).
-- − NestJS ha una curva di apprendimento iniziale rispetto a Node "puro"; è un
-    costo accettato perché rientra tra gli obiettivi didattici.
-- − Scelte di framework da confermare prima di scendere di stato ad "Accettato".

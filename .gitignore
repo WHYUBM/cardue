@@ -83,3 +83,6 @@ desktop.ini
 tmp/
 temp/
 *.tgz
+
+# --- Template ADR (non versionato) ---
+0000-template.md

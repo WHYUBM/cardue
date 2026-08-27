@@ -43,7 +43,7 @@ fonti ufficiali.
 Le scelte tecniche e le motivazioni sono documentate negli
 [Architecture Decision Records](docs/adr/README.md).
 
-## Architettura (vista Container — modello C4)
+## Architettura
 
 ```mermaid
 graph TD

@@ -1,0 +1,76 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  list-style: none;
+}
+
+.main {
+  min-width: 0;
+}
+
+.titleLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.type {
+  font-weight: 700;
+}
+
+.vehicle {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.vehicle:hover {
+  color: var(--accent);
+}
+
+.date {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.notes {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+/* The left stripe echoes the state color of the badge on the same row. */
+.expired,
+.urgent {
+  border-left-color: var(--danger);
+}
+
+.upcoming {
+  border-left-color: var(--warning);
+}
+
+.ok {
+  border-left-color: var(--success);
+}
+
+.paused {
+  border-left-color: var(--neutral);
+  opacity: 0.75;
+}

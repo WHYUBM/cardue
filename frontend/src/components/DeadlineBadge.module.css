@@ -1,0 +1,50 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.detail {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* Expired: filled pill, so it reads apart from "urgent" while staying red. */
+.expired {
+  color: var(--on-danger);
+  background-color: var(--danger);
+  border-color: var(--danger);
+}
+
+.urgent {
+  color: var(--danger);
+  background-color: var(--danger-soft);
+}
+
+.upcoming {
+  color: var(--warning);
+  background-color: var(--warning-soft);
+}
+
+.ok {
+  color: var(--success);
+  background-color: var(--success-soft);
+}
+
+.paused {
+  color: var(--neutral);
+  background-color: var(--neutral-soft);
+}

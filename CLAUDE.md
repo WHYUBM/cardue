@@ -15,23 +15,28 @@ scorciatoie.
 ## Stato attuale
 
 Siamo **dentro il passo 3** della roadmap (scheletro end-to-end in locale).
-Esistono due scaffold, generati e committati ma **non ancora modificati**:
 
-- `backend/` — NestJS 12, ESM, Vitest. Espone solo `GET /` → `"Hello World!"`.
-- `frontend/` — React 19 + Vite 8. È la landing page del template `create-vite`.
+- `backend/` — NestJS 12, ESM, Vitest. Ancora lo scaffold: espone solo
+  `GET /` → `"Hello World!"`.
+- `frontend/` — React 19 + Vite 8 con **React Router 8**. Il template
+  `create-vite` è stato sostituito dalla struttura delle pagine (ADR 0005):
+  tutte le rotte pubbliche e dell'area app esistono come gusci navigabili,
+  alimentati da **mock hardcoded** in `src/mocks/` e tipizzati da
+  `src/types/index.ts`.
 
 **I due progetti non comunicano ancora**: nessuna chiamata HTTP dal frontend,
-nessun CORS né proxy Vite, nessun database collegato. Non esistono ancora
-PWA/manifest/Service Worker, push, autenticazione, Docker o CI.
+nessun CORS né proxy Vite, nessun database collegato. Nell'area app non c'è
+autenticazione né route guard: le rotte sono raggiungibili da chiunque. Non
+esistono ancora PWA/manifest/Service Worker, push, Docker o CI.
 
 Il prossimo obiettivo è la prima fetta verticale reale: creazione di un veicolo
 dalla UI → `POST /api/vehicles` → persistenza su PostgreSQL → lista letta dal DB.
 
 ## ⚠️ Decisioni NON ancora finalizzate
 
-Lo stack è chiuso: gli ADR 0001, 0002 e 0003 sono **Accettati** (React+Vite,
-NestJS, PostgreSQL, Web Push, deploy su VPS con Docker). Su queste scelte puoi
-costruire senza chiedere conferma.
+Lo stack è chiuso: gli ADR 0001, 0002, 0003 e 0005 sono **Accettati**
+(React+Vite, NestJS, PostgreSQL, Web Push, deploy su VPS con Docker, routing con
+React Router). Su queste scelte puoi costruire senza chiedere conferma.
 
 Restano aperte due decisioni:
 
@@ -53,6 +58,8 @@ e aggiorna l'ADR (o creane uno nuovo) una volta deciso, allineando l'indice in
 - Frontend: React + Vite, come PWA installabile — *accettato*
 - Backend: Node.js + NestJS, TypeScript — *accettato*
 - Database: PostgreSQL — *accettato*
+- Routing frontend: React Router, modalità dichiarativa — *accettato* (ADR 0005)
+- Styling frontend: CSS globale + CSS Modules, nessuna libreria UI — *accettato* (ADR 0005)
 - Notifiche: Web Push (VAPID) + cron giornaliero — *accettato*
 - Deploy: VPS Aruba + Docker Compose, reverse proxy con HTTPS — *accettato*
 - CI/CD: GitHub Actions — previsto più avanti
@@ -67,6 +74,8 @@ serviranno tipi condivisi tra backend e frontend, andrà introdotto.
 |---|---|---|
 | Framework | NestJS 12 (Express) | React 19 + Vite 8 |
 | Test | Vitest (`*.spec.ts` unit, `*.e2e-spec.ts` e2e, config separate) | non configurati |
+| Routing | — | React Router 8, modalità dichiarativa (`src/App.tsx`) |
+| Styling | — | CSS globale (`src/index.css`) + CSS Modules per componente |
 | Lint | oxlint | ESLint (flat config) |
 | Porta in dev | 3000 (`PORT` override) | 5173 |
 | Avvio | `npm run start:dev` | `npm run dev` |
@@ -85,6 +94,20 @@ Da sapere prima di toccare il codice:
   a runtime con `ERR_MODULE_NOT_FOUND`.
 - **Le rotte non hanno ancora prefisso** `/api` e non c'è `ValidationPipe`
   globale: vanno aggiunti quando si crea il primo endpoint reale.
+- **I dati del frontend sono mock.** Tutte le pagine leggono da `src/mocks/`,
+  importati staticamente: nessun `fetch`, nessuna persistenza, i form sono
+  inerti. Quando arriveranno le API, il punto da sostituire è quello — non
+  toccare `src/lib/` né i componenti.
+- **Lo stato di una scadenza è derivato, non memorizzato.** `DeadlineStatus`
+  (`expired`/`urgent`/`upcoming`/`ok`/`paused`) lo calcola
+  `getDeadlineStatus()` da data e flag di pausa. Il database dovrà salvare la
+  **data**, mai l'etichetta.
+- **`src/types/index.ts` è la bozza del modello di dominio.** Prima di definire
+  entità lato backend, leggilo: duplicarlo divergendo sarebbe il primo
+  disallineamento del progetto.
+- **`BrowserRouter` richiede il fallback su `index.html`** per ogni percorso
+  sconosciuto. In dev ci pensa Vite; in produzione dovrà farlo il reverse proxy,
+  altrimenti un refresh su `/veicoli/1` dà 404.
 
 ## Convenzioni
 
@@ -97,7 +120,10 @@ Da sapere prima di toccare il codice:
   variabile d'ambiente reale.
 - **TypeScript** su tutto lo stack.
 - **Commit**: stile Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`…).
-- **Lingua**: documentazione e commenti in italiano; codice/identificatori in inglese.
+- **Lingua**: commenti e codice in inglese; il testo dell'interfaccia utente resta
+  in italiano. La documentazione di progetto (README, ADR, questo file) resta in
+  italiano. Nel frontend i segnaposto sono marcati con `// MOCK:` (dati finti da
+  sostituire) e `// TODO:` (lavoro futuro), così restano ricercabili.
 
 ## Approccio di sviluppo
 
@@ -128,5 +154,6 @@ al passo 5 della roadmap (per non consumare inutilmente il credito Aruba).
 ## Debiti noti (piccoli, da sanare quando si passa di lì)
 
 - `backend/package.json` dichiara `"license": "UNLICENSED"`, ma il progetto è MIT.
-- `frontend/index.html` ha ancora `<title>frontend</title>` e `lang="en"`.
 - `frontend/.gitignore` duplica regole già presenti nel `.gitignore` di root.
+- Nessun code splitting per rotta nel frontend: tutte le pagine finiscono in un
+  unico bundle (`React.lazy` quando il peso lo giustificherà).

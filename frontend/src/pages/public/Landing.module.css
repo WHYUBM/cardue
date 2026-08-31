@@ -1,0 +1,46 @@
+.hero {
+  padding: 2.5rem 0 2rem;
+  text-align: center;
+}
+
+.title {
+  font-size: clamp(2rem, 5vw, 2.9rem);
+  letter-spacing: -0.03em;
+  margin-bottom: 0.75rem;
+}
+
+.subtitle {
+  max-width: 38rem;
+  margin: 0 auto 1.75rem;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.repoLine {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.features h2 {
+  font-size: 1.05rem;
+}
+
+.features p {
+  margin: 0;
+  font-size: 0.93rem;
+}

@@ -1,0 +1,19 @@
+.notice {
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--warning);
+  border-left-width: 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--warning-soft);
+  margin-bottom: 1.5rem;
+}
+
+.heading {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--warning);
+}
+
+.text {
+  margin: 0;
+  font-size: 0.9rem;
+}

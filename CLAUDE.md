@@ -34,16 +34,13 @@ dalla UI → `POST /api/vehicles` → persistenza su PostgreSQL → lista letta 
 
 ## ⚠️ Decisioni NON ancora finalizzate
 
-Lo stack è chiuso: gli ADR 0001, 0002, 0003 e 0005 sono **Accettati**
+Lo stack è chiuso: gli ADR 0001, 0002, 0003, 0005 e 0006 sono **Accettati**
 (React+Vite, NestJS, PostgreSQL, Web Push, deploy su VPS con Docker, routing con
-React Router). Su queste scelte puoi costruire senza chiedere conferma.
+React Router, accesso ai dati con TypeORM). Su queste scelte puoi costruire senza
+chiedere conferma.
 
-Restano aperte due decisioni:
+Resta aperta una decisione:
 
-- **Accesso ai dati / ORM**: TypeORM, Prisma, Drizzle o `pg` puro — **non ancora
-  scelto**, nessun client installato. È una scelta strutturale e difficile da
-  invertire: prima di scrivere codice di persistenza, proponi le alternative,
-  chiedi conferma e scrivi un ADR.
 - **Fonte dataset marca-modello**: da scegliere (ADR 0004, stato "Proposto").
   Prima di scrivere codice che dipende da una fonte specifica, proponi le
   alternative e chiedi conferma.
@@ -60,6 +57,7 @@ e aggiorna l'ADR (o creane uno nuovo) una volta deciso, allineando l'indice in
 - Database: PostgreSQL — *accettato*
 - Routing frontend: React Router, modalità dichiarativa — *accettato* (ADR 0005)
 - Styling frontend: CSS globale + CSS Modules, nessuna libreria UI — *accettato* (ADR 0005)
+- Accesso ai dati: TypeORM (`@nestjs/typeorm` + `pg`) — *accettato* (ADR 0006)
 - Notifiche: Web Push (VAPID) + cron giornaliero — *accettato*
 - Deploy: VPS Aruba + Docker Compose, reverse proxy con HTTPS — *accettato*
 - CI/CD: GitHub Actions — previsto più avanti

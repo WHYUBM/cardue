@@ -1,0 +1,41 @@
+# Local development stack.
+#
+# For now it holds PostgreSQL only: backend and frontend run on the host with
+# `npm run start:dev` and `npm run dev`. The full stack (backend + database +
+# reverse proxy) arrives at roadmap step 5, together with the VPS deploy
+# (ADR 0002).
+#
+#   docker compose up -d      start the database in the background
+#   docker compose down       stop it, keeping the data
+#   docker compose down -v    stop it and drop the volume (schema is recreated)
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: cardue-db
+    restart: unless-stopped
+    # Single source of the credentials: the very same variables the backend
+    # reads, so there are never two copies to keep in sync.
+    env_file: ./backend/.env
+    ports:
+      # Published on the host because the backend is not containerized yet.
+      # If port 5432 is already taken by a system PostgreSQL, change the left
+      # side and align POSTGRES_PORT in backend/.env.
+      - '5432:5432'
+    volumes:
+      # Since PostgreSQL 18 the official image expects the mount on
+      # /var/lib/postgresql rather than on the /data subdirectory: mounting the
+      # volume one level down makes the container refuse to start.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # Needed by the `depends_on: condition: service_healthy` of the day the
+      # backend becomes a service in this file too: without it, it would start
+      # before PostgreSQL accepts connections.
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+    name: cardue-pgdata

@@ -4,6 +4,20 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      // Two entry points: the application, and the Service Worker.
+      input: { main: 'index.html', sw: 'src/sw.ts' },
+      output: {
+        // The worker must land at a stable `/sw.js`: its URL determines the
+        // scope it controls, and a content hash in the name would change that
+        // at every deploy. Everything else keeps the hash, which is what makes
+        // the cache-first strategy in the worker safe.
+        entryFileNames: (chunk) =>
+          chunk.name === 'sw' ? 'sw.js' : 'assets/[name]-[hash].js',
+      },
+    },
+  },
   server: {
     proxy: {
       // Forwards /api to the NestJS backend so the browser only ever talks to

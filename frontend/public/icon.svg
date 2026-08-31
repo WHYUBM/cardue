@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Full-bleed background: the icon is declared "maskable", so Android may
+       crop it to a circle. The glyph stays inside the central safe zone. -->
+  <rect width="512" height="512" fill="#1f6feb"/>
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Calendar body -->
+    <rect x="116" y="150" width="280" height="250" rx="28"/>
+    <!-- Header rule -->
+    <path d="M116 216h280"/>
+    <!-- Hangers -->
+    <path d="M192 118v50M320 118v50"/>
+    <!-- Check mark: the deadline that has been taken care of -->
+    <path d="M186 300l48 48 92-92" stroke-width="32"/>
+  </g>
+</svg>

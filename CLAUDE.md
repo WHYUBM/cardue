@@ -47,8 +47,8 @@ PWA/manifest/Service Worker, push, Dockerfile e CI.
 
 Il piano approvato per i prossimi passi, in ordine:
 
-1. **PWA**: manifest, Service Worker, cache del guscio. Senza, l'app non si apre
-   nemmeno offline.
+1. ~~**PWA**~~ — fatta (ADR 0011): manifest, icone, Service Worker scritto a
+   mano. L'app è installabile e il guscio si apre senza rete.
 2. **Autenticazione** con Keycloak in modalità BFF (ADR 0009). La migrazione che
    introduce gli utenti deve **anche** portare i campi previsti da ADR 0010 —
    `updatedAt` sulle scadenze, `deletedAt` per i tombstone, id generati dal
@@ -61,8 +61,8 @@ dipende da ADR 0004, ancora aperto.
 
 ## ⚠️ Decisioni NON ancora finalizzate
 
-Lo stack è chiuso: gli ADR 0001, 0002, 0003, 0005, 0006, 0007, 0008, 0009 e
-0010 sono **Accettati** (React+Vite, NestJS, PostgreSQL, Web Push, deploy su VPS
+Lo stack è chiuso: gli ADR 0001, 0002, 0003, 0005, 0006, 0007, 0008, 0009,
+0010 e 0011 sono **Accettati** (React+Vite, NestJS, PostgreSQL, Web Push, deploy su VPS
 con Docker, routing con React Router, accesso ai dati con TypeORM, data fetching
 con `fetch` a mano, autenticazione con Keycloak in modalità BFF, architettura
 local-first). Su queste scelte puoi costruire senza chiedere conferma.
@@ -89,6 +89,7 @@ e aggiorna l'ADR (o creane uno nuovo) una volta deciso, allineando l'indice in
 - Data fetching frontend: `fetch` nativo + hook scritti a mano, nessuna libreria — *accettato* (ADR 0007)
 - Autenticazione: Keycloak come identity provider, integrato in modalità BFF — *accettato* (ADR 0009)
 - Architettura dati client: local-first, IndexedDB come fonte di verità con sincronizzazione — *accettato* (ADR 0010)
+- PWA: manifest + Service Worker scritto a mano, nessun plugin — *accettato* (ADR 0011)
 - Notifiche: Web Push (VAPID) + cron giornaliero — *accettato*
 - Deploy: VPS Aruba + Docker Compose, reverse proxy con HTTPS — *accettato*
 - CI/CD: GitHub Actions — previsto più avanti
@@ -165,7 +166,12 @@ Da sapere prima di toccare il codice:
   mai inviare `mileageKm: 0` per un campo vuoto — deve ometterlo.
 - **`BrowserRouter` richiede il fallback su `index.html`** per ogni percorso
   sconosciuto. In dev ci pensa Vite; in produzione dovrà farlo il reverse proxy,
-  altrimenti un refresh su `/veicoli/1` dà 404.
+  altrimenti un refresh su `/veicoli/1` dà 404. Offline lo fa il Service Worker,
+  che serve il guscio in cache sotto la chiave `/`.
+- **Il Service Worker non gira in `npm run dev`**, solo nel build di produzione:
+  per provarlo servono `npm run build && npm run preview`. E non deve mai
+  intercettare `/api/` — i dati offline sono compito di ADR 0010, non di una
+  cache HTTP.
 
 ## Convenzioni
 

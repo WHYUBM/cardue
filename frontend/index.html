@@ -5,6 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="PWA per tenere sotto controllo scadenze e manutenzione della tua auto: bollo, assicurazione, revisione e tagliando." />
+
+    <!-- Installable app: the manifest declares name, icons and how the window
+         is presented once added to the home screen. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1f6feb" />
+
+    <!-- iOS ignores most of the manifest and reads these instead. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Cardue" />
+
     <title>Cardue — scadenze e manutenzione auto</title>
   </head>
   <body>

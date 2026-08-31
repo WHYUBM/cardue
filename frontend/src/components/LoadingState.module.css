@@ -1,0 +1,5 @@
+.loading {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--text-muted);
+}

@@ -6,7 +6,20 @@
  * distances read the same on every screen. All output is Italian by design —
  * the interface language — while the code around it stays English.
  */
-import type { DeadlineStatus, DeadlineType } from '../types'
+import type {
+  Deadline,
+  DeadlineStatus,
+  DeadlineType,
+  StandardDeadlineType,
+} from '../types'
+
+/** The four fixed kinds, in the order the interface presents them. */
+export const STANDARD_DEADLINE_TYPES: StandardDeadlineType[] = [
+  'bollo',
+  'assicurazione',
+  'revisione',
+  'tagliando',
+]
 
 /** Human-readable labels for the deadline kinds. */
 export const DEADLINE_LABELS: Record<DeadlineType, string> = {
@@ -14,6 +27,20 @@ export const DEADLINE_LABELS: Record<DeadlineType, string> = {
   assicurazione: 'Assicurazione',
   revisione: 'Revisione',
   tagliando: 'Tagliando',
+  // Only a fallback: a custom deadline is shown by its title, and reaches this
+  // label only if one is somehow missing.
+  custom: 'Scadenza personalizzata',
+}
+
+/**
+ * The name to show for a deadline.
+ *
+ * Standard kinds are named by their type, custom ones by the title the user
+ * gave them. Every place that displays a deadline goes through here, so the two
+ * cases cannot drift apart screen by screen.
+ */
+export function deadlineName(deadline: Pick<Deadline, 'type' | 'title'>): string {
+  return deadline.title?.trim() || DEADLINE_LABELS[deadline.type]
 }
 
 /** Human-readable labels for the deadline states. */

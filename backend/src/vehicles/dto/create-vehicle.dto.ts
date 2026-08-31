@@ -12,8 +12,16 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { DEADLINE_TYPES } from '../entities/deadline.entity.js';
 import { CreateDeadlineDto } from './create-deadline.dto.js';
+
+/**
+ * Upper bound on how many deadlines one vehicle may carry.
+ *
+ * The four standard kinds are capped by their own uniqueness; custom ones are
+ * not, so a limit is needed to keep a payload from growing without bound. The
+ * number is generous — it is a guard rail, not a product rule.
+ */
+export const MAX_DEADLINES_PER_VEHICLE = 20;
 
 /** Upper bound for the odometer: past this, the reading is a typo. */
 export const MAX_MILEAGE_KM = 2_000_000;
@@ -76,15 +84,14 @@ export class CreateVehicleDto {
    * Deadlines created together with the vehicle.
    *
    * They travel inside this payload rather than through their own endpoint
-   * because the form offers one date field per kind and saves them in a single
-   * action: splitting them would turn one save into five requests, with no
-   * atomicity across them.
+   * because the form saves the whole vehicle in a single action: splitting them
+   * would turn one save into several requests, with no atomicity across them.
    *
    * Every entry is optional — the user may not know all the dates yet.
    */
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(DEADLINE_TYPES.length)
+  @ArrayMaxSize(MAX_DEADLINES_PER_VEHICLE)
   @ValidateNested({ each: true })
   @Type(() => CreateDeadlineDto)
   deadlines?: CreateDeadlineDto[];

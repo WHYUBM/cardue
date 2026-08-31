@@ -82,7 +82,7 @@ describe('VehiclesService', () => {
       expect(created.deadlines[1].notes).toBe('Officina');
     });
 
-    it('rejects two deadlines of the same kind', async () => {
+    it('rejects two deadlines of the same standard kind', async () => {
       await expect(
         service.create({
           ...baseVehicle,
@@ -92,6 +92,68 @@ describe('VehiclesService', () => {
           ],
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('create, custom deadlines', () => {
+    it('keeps the title of a custom deadline', async () => {
+      const created = await service.create({
+        ...baseVehicle,
+        deadlines: [
+          { type: 'custom', title: 'Gomme invernali', dueDate: '2026-11-15' },
+        ],
+      });
+
+      expect(created.deadlines[0]).toMatchObject({
+        type: 'custom',
+        title: 'Gomme invernali',
+        dueDate: '2026-11-15',
+      });
+    });
+
+    // The whole point of custom deadlines: unlike the standard kinds, a vehicle
+    // may carry several of them.
+    it('allows several custom deadlines on one vehicle', async () => {
+      const created = await service.create({
+        ...baseVehicle,
+        deadlines: [
+          { type: 'custom', title: 'Gomme invernali', dueDate: '2026-11-15' },
+          { type: 'custom', title: 'Cambio batteria', dueDate: '2027-02-01' },
+        ],
+      });
+
+      expect(created.deadlines).toHaveLength(2);
+    });
+
+    it('rejects a custom deadline without a title', async () => {
+      await expect(
+        service.create({
+          ...baseVehicle,
+          deadlines: [{ type: 'custom', dueDate: '2026-11-15' }],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    // Storing it would mean keeping a value the interface never shows, since a
+    // standard deadline is named after its type.
+    it('rejects a title on a standard deadline', async () => {
+      await expect(
+        service.create({
+          ...baseVehicle,
+          deadlines: [
+            { type: 'bollo', title: 'Il mio bollo', dueDate: '2026-11-30' },
+          ],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('leaves the title null on standard deadlines', async () => {
+      const created = await service.create({
+        ...baseVehicle,
+        deadlines: [{ type: 'bollo', dueDate: '2026-11-30' }],
+      });
+
+      expect(created.deadlines[0].title).toBeNull();
     });
   });
 

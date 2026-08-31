@@ -102,3 +102,13 @@
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+/* Failure message inside the modals: a save or a delete that did not go through. */
+.formError {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.9rem;
+}

@@ -1,16 +1,34 @@
 /**
  * Shared domain types for Cardue.
  *
- * Used by both the mock data and the components: until the backend exists,
- * this file is the only definition of the shape of the data.
+ * These describe what `/api/vehicles` actually returns, and are the counterpart
+ * of the entities in `backend/src/vehicles/entities/`. The API also sends
+ * bookkeeping fields the interface never reads (`createdAt`, `updatedAt`);
+ * leaving them out keeps this file about the domain.
  *
- * TODO: This is the draft domain model. When the backend defines its entities,
- * reconcile them with this file instead of duplicating it — two definitions
- * drifting apart would be the project's first real inconsistency.
+ * TODO: The two definitions are still kept in step by hand — there is no npm
+ * workspace and no shared package. Any change to the model has to be made on
+ * both sides, and nothing will warn if one is forgotten.
  */
 
-/** The four deadline kinds the application tracks. */
-export type DeadlineType = 'bollo' | 'assicurazione' | 'revisione' | 'tagliando'
+/**
+ * The four deadline kinds fixed by the domain: at most one each per vehicle,
+ * and their name is not up to the user.
+ */
+export type StandardDeadlineType =
+  | 'bollo'
+  | 'assicurazione'
+  | 'revisione'
+  | 'tagliando'
+
+/**
+ * Every deadline kind, including the user-defined one.
+ *
+ * A `custom` deadline is named by its `title` and may repeat within a vehicle;
+ * everything else about it — date, derived status, ordering — works exactly
+ * like the standard kinds.
+ */
+export type DeadlineType = StandardDeadlineType | 'custom'
 
 /**
  * State of a deadline, derived from its due date and whether it is paused.
@@ -31,15 +49,25 @@ export interface Deadline {
   id: string
   vehicleId: string
   type: DeadlineType
+  /**
+   * User-given name, set only when `type` is `'custom'` and `null` otherwise:
+   * a standard deadline takes its name from its type.
+   */
+  title: string | null
   /** Due date as an ISO `YYYY-MM-DD` string, with no time component. */
   dueDate: string
-  /** Free-form user notes, such as the insurer or the garage. */
-  notes?: string
+  /**
+   * Free-form user notes, such as the insurer or the garage.
+   *
+   * `null` rather than absent: the column is nullable, and that is the shape
+   * the API sends.
+   */
+  notes: string | null
   /**
    * Insurance only: the policy is suspended, so no reminder is raised. Used
    * when a vehicle is off the road but the deadline should stay visible.
    */
-  paused?: boolean
+  paused: boolean
 }
 
 /** A vehicle owned by the user, together with its deadlines. */
@@ -50,7 +78,11 @@ export interface Vehicle {
   year: number
   /** Plate in uppercase with no spaces; `formatPlate` handles presentation. */
   plate: string
-  mileageKm?: number
+  /**
+   * Odometer reading in kilometres. Always present: a vehicle created without
+   * one is taken to be new, so the value is 0 rather than missing.
+   */
+  mileageKm: number
   deadlines: Deadline[]
 }
 

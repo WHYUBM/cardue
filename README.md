@@ -4,7 +4,25 @@ PWA per tenere sotto controllo le scadenze e la manutenzione della propria auto:
 bollo, assicurazione, revisione, tagliando e altri interventi periodici, con
 promemoria automatici prima di ogni scadenza.
 
-Il progetto è open source, sviluppato a scopo didattico e di portfolio.
+Progetto personale, open source e non profit. Lo scopo è uno solo: **non
+dimenticare più una scadenza dell'auto**.
+
+---
+
+## 🤖 Scritto da Claude Code
+
+Tutto il codice di questo repository — backend, frontend, configurazione, test e
+documentazione — è **scritto da [Claude Code](https://claude.com/claude-code)**,
+l'assistente di programmazione di Anthropic.
+
+Il ruolo umano è quello di committente e revisore: definire cosa deve fare
+l'applicazione, decidere fra le alternative proposte e verificare il risultato.
+Il ruolo di Claude Code è tradurre quelle scelte in codice funzionante e
+documentarne le ragioni.
+
+Le decisioni architetturali, con le alternative valutate e i costi accettati,
+sono tracciate negli [Architecture Decision Records](docs/adr/README.md): sono il
+posto in cui leggere *perché* il progetto è fatto così.
 
 ---
 
@@ -42,6 +60,11 @@ fonti ufficiali.
 
 Le scelte tecniche e le motivazioni sono documentate negli
 [Architecture Decision Records](docs/adr/README.md).
+
+Il criterio che le guida è la **longevità**: un progetto personale mantenuto da
+una persona sola deve poter restare fermo per mesi e ripartire senza sorprese.
+Da qui la preferenza per poche dipendenze, strumenti con documentazione solida e
+soluzioni introdotte quando servono, non prima.
 
 ## Architettura
 

@@ -5,12 +5,14 @@
 import { Link } from 'react-router'
 import { DeadlineRow } from '../../components/DeadlineRow'
 import { EmptyState } from '../../components/EmptyState'
+import { ErrorState } from '../../components/ErrorState'
+import { LoadingState } from '../../components/LoadingState'
+import { useVehicles } from '../../hooks/useVehicles'
 import {
   countNeedingAttention,
   getAllDeadlinesByUrgency,
   getDeadlineStatus,
 } from '../../lib/deadlines'
-import { mockVehicles } from '../../mocks/vehicles'
 import { mockUser } from '../../mocks/user'
 import type { DeadlineStatus, DeadlineWithVehicle } from '../../types'
 import styles from './Dashboard.module.css'
@@ -54,8 +56,12 @@ const SECTIONS: { key: string; title: string; hint: string; statuses: DeadlineSt
  * screen of the signed-in area.
  */
 export function Dashboard() {
-  // MOCK: Static import of the fixture; the API call will replace this line.
-  const vehicles = mockVehicles
+  const { data, loading, error, reload } = useVehicles()
+
+  // The aggregation stays client-side: the API returns whole vehicles with
+  // their deadlines, and these helpers are the same pure functions that already
+  // served the fixtures.
+  const vehicles = data ?? []
   const allDeadlines = getAllDeadlinesByUrgency(vehicles)
   const attentionCount = countNeedingAttention(vehicles)
 
@@ -78,9 +84,13 @@ export function Dashboard() {
           {/* MOCK: First name of the fixture user; there is no session yet. */}
           <h1>Ciao {mockUser.name.split(' ')[0]}</h1>
           <p>
-            {attentionCount > 0
-              ? `Ci sono ${attentionCount} scadenze che richiedono la tua attenzione.`
-              : 'Nessuna scadenza urgente: sei in pari.'}
+            {loading
+              ? 'Caricamento delle scadenze…'
+              : error
+                ? 'Non è stato possibile leggere le tue scadenze.'
+                : attentionCount > 0
+                  ? `Ci sono ${attentionCount} scadenze che richiedono la tua attenzione.`
+                  : 'Nessuna scadenza urgente: sei in pari.'}
           </p>
         </div>
         <Link to="/veicoli/nuovo" className="btn btn-primary">
@@ -103,7 +113,11 @@ export function Dashboard() {
         </div>
       </section>
 
-      {allDeadlines.length === 0 ? (
+      {loading ? (
+        <LoadingState label="Caricamento delle scadenze…" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : allDeadlines.length === 0 ? (
         <EmptyState
           title="Nessuna scadenza da mostrare"
           description="Aggiungi il tuo primo veicolo per iniziare a ricevere i promemoria."

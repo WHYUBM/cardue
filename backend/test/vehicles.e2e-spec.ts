@@ -5,21 +5,26 @@ import request from 'supertest';
 import { DataSource, QueryRunner } from 'typeorm';
 import { configureApp } from './../src/app-setup.js';
 import { AppModule } from './../src/app.module.js';
-import { buildDataSourceOptions } from './../src/database/data-source.js';
 import { Deadline } from './../src/vehicles/entities/deadline.entity.js';
 import { Vehicle } from './../src/vehicles/entities/vehicle.entity.js';
+import { createTestDataSource } from './test-database.js';
 
 /**
- * End-to-end tests against the real database, each one rolled back.
+ * End-to-end tests against a real database, each one rolled back.
  *
- * How the isolation works: a transaction is opened on a dedicated query runner
- * before every test, and the repositories the application injects are replaced
- * with repositories bound to that runner's entity manager. Everything the
- * request handlers write therefore happens inside the transaction, and the
- * rollback in `afterEach` leaves the database exactly as it was.
+ * Isolation has two layers, and both are needed:
  *
- * The alternative — truncating tables between tests — would empty a database
- * that in development also holds data the developer put there by hand.
+ * 1. **A dedicated database** (`test-database.ts`), so the rows a developer
+ *    created by hand while using the app cannot influence an assertion — and so
+ *    the tests can never damage them.
+ * 2. **A transaction per test**: it is opened on a dedicated query runner
+ *    before each test, and the repositories the application injects are
+ *    replaced with repositories bound to that runner's entity manager.
+ *    Everything the request handlers write happens inside it, and the rollback
+ *    in `afterEach` leaves the database exactly as it was.
+ *
+ * Layer 2 alone is not enough: a transaction isolates what the tests *write*,
+ * it does not hide what was already there.
  */
 describe('Vehicles (e2e)', () => {
   let dataSource: DataSource;
@@ -27,8 +32,7 @@ describe('Vehicles (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    dataSource = new DataSource(buildDataSourceOptions());
-    await dataSource.initialize();
+    dataSource = await createTestDataSource();
   });
 
   afterAll(async () => {
@@ -134,6 +138,67 @@ describe('Vehicles (e2e)', () => {
       return request(app.getHttpServer())
         .post('/api/vehicles')
         .send({ ...validVehicle, owner: 'someone else' })
+        .expect(400);
+    });
+  });
+
+  describe('POST /api/vehicles, custom deadlines', () => {
+    it('stores several custom deadlines with their titles', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/vehicles')
+        .send({
+          ...validVehicle,
+          deadlines: [
+            { type: 'bollo', dueDate: '2026-11-30' },
+            { type: 'custom', title: 'Gomme invernali', dueDate: '2026-11-15' },
+            { type: 'custom', title: 'Cambio batteria', dueDate: '2027-02-01' },
+          ],
+        })
+        .expect(201);
+
+      expect(response.body.deadlines).toHaveLength(3);
+      const titles = response.body.deadlines
+        .filter((deadline: { type: string }) => deadline.type === 'custom')
+        .map((deadline: { title: string }) => deadline.title);
+      expect(titles).toEqual(
+        expect.arrayContaining(['Gomme invernali', 'Cambio batteria']),
+      );
+    });
+
+    it('rejects a custom deadline without a title', () => {
+      return request(app.getHttpServer())
+        .post('/api/vehicles')
+        .send({
+          ...validVehicle,
+          deadlines: [{ type: 'custom', dueDate: '2026-11-15' }],
+        })
+        .expect(400);
+    });
+
+    it('rejects a title longer than the column', () => {
+      return request(app.getHttpServer())
+        .post('/api/vehicles')
+        .send({
+          ...validVehicle,
+          deadlines: [
+            { type: 'custom', title: 'x'.repeat(81), dueDate: '2026-11-15' },
+          ],
+        })
+        .expect(400);
+    });
+
+    // The partial unique index has to let these through, while still rejecting
+    // two `bollo` on the same vehicle.
+    it('still rejects two deadlines of the same standard kind', () => {
+      return request(app.getHttpServer())
+        .post('/api/vehicles')
+        .send({
+          ...validVehicle,
+          deadlines: [
+            { type: 'bollo', dueDate: '2026-11-30' },
+            { type: 'bollo', dueDate: '2027-11-30' },
+          ],
+        })
         .expect(400);
     });
   });

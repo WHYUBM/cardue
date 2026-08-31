@@ -5,7 +5,7 @@
 import { Link } from 'react-router'
 import type { Deadline, Vehicle } from '../types'
 import { daysUntil, getDeadlineStatus } from '../lib/deadlines'
-import { DEADLINE_LABELS, formatDate, formatPlate, formatRemaining } from '../lib/format'
+import { deadlineName, formatDate, formatPlate, formatRemaining } from '../lib/format'
 import { DeadlineBadge } from './DeadlineBadge'
 import styles from './DeadlineRow.module.css'
 
@@ -32,7 +32,7 @@ export function DeadlineRow({ deadline, vehicle, onManage }: DeadlineRowProps) {
     <li className={`${styles.row} ${styles[status]}`}>
       <div className={styles.main}>
         <div className={styles.titleLine}>
-          <span className={styles.type}>{DEADLINE_LABELS[deadline.type]}</span>
+          <span className={styles.type}>{deadlineName(deadline)}</span>
           {vehicle && (
             <Link to={`/veicoli/${vehicle.id}`} className={styles.vehicle}>
               {vehicle.make} {vehicle.model} · {formatPlate(vehicle.plate)}

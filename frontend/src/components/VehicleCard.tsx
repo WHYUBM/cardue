@@ -4,7 +4,7 @@
 import { Link } from 'react-router'
 import type { Vehicle } from '../types'
 import { getDeadlineStatus, getNextDeadline, daysUntil } from '../lib/deadlines'
-import { DEADLINE_LABELS, formatDateShort, formatPlate, formatRemaining } from '../lib/format'
+import { deadlineName, formatDateShort, formatPlate, formatRemaining } from '../lib/format'
 import { DeadlineBadge } from './DeadlineBadge'
 import styles from './VehicleCard.module.css'
 
@@ -42,7 +42,7 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
         {next ? (
           <>
             <span className={styles.nextLabel}>
-              Prossima scadenza: <strong>{DEADLINE_LABELS[next.type]}</strong>{' '}
+              Prossima scadenza: <strong>{deadlineName(next)}</strong>{' '}
               ({formatDateShort(next.dueDate)})
             </span>
             <DeadlineBadge

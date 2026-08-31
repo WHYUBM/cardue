@@ -35,3 +35,52 @@
   text-align: right;
   font-size: 0.85rem;
 }
+
+/* Validation and network failures returned by the API on submit. */
+.formError {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.formError ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}
+
+/* User-defined deadlines: a repeatable title + date row. */
+.customBlock {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.customTitle {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.customRow {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-top: 1rem;
+}
+
+.customRow .field {
+  flex: 1 1 12rem;
+}
+
+/* Keeps the button aligned with the inputs rather than with their labels. */
+.customRemove {
+  margin-bottom: 0.1rem;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 620px) {
+  .customRow {
+    flex-wrap: wrap;
+  }
+}

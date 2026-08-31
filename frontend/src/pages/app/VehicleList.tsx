@@ -3,15 +3,22 @@
  */
 import { Link } from 'react-router'
 import { EmptyState } from '../../components/EmptyState'
+import { ErrorState } from '../../components/ErrorState'
+import { LoadingState } from '../../components/LoadingState'
 import { VehicleCard } from '../../components/VehicleCard'
-import { mockVehicles } from '../../mocks/vehicles'
+import { useVehicles } from '../../hooks/useVehicles'
 import styles from './VehicleList.module.css'
 
-/** Renders every vehicle as a card, or an empty state when there are none. */
+/**
+ * Renders every vehicle as a card, or an empty state when there are none.
+ *
+ * The three remote states are rendered apart on purpose (ADR 0007): an empty
+ * list and a failed request look alike but mean opposite things.
+ */
 export function VehicleList() {
-  // MOCK: Static import of the fixture. This is the seam where the vehicles
-  // list will be fetched from `GET /api/vehicles`.
-  const vehicles = mockVehicles
+  const { data: vehicles, loading, error, reload } = useVehicles()
+
+  const count = vehicles?.length ?? 0
 
   return (
     <>
@@ -19,9 +26,11 @@ export function VehicleList() {
         <div>
           <h1>I miei veicoli</h1>
           <p>
-            {vehicles.length === 1
-              ? '1 veicolo registrato'
-              : `${vehicles.length} veicoli registrati`}
+            {loading
+              ? 'Caricamento…'
+              : count === 1
+                ? '1 veicolo registrato'
+                : `${count} veicoli registrati`}
           </p>
         </div>
         <Link to="/veicoli/nuovo" className="btn btn-primary">
@@ -29,7 +38,11 @@ export function VehicleList() {
         </Link>
       </div>
 
-      {vehicles.length === 0 ? (
+      {loading ? (
+        <LoadingState label="Caricamento dei veicoli…" />
+      ) : error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : count === 0 ? (
         <EmptyState
           title="Non hai ancora registrato veicoli"
           description="Aggiungi la tua auto per tenere traccia di bollo, assicurazione, revisione e tagliando."
@@ -41,7 +54,7 @@ export function VehicleList() {
         />
       ) : (
         <div className={styles.grid}>
-          {vehicles.map((vehicle) => (
+          {vehicles?.map((vehicle) => (
             <VehicleCard key={vehicle.id} vehicle={vehicle} />
           ))}
         </div>

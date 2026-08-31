@@ -21,12 +21,14 @@ export function Landing() {
           Cardue tiene traccia di bollo, assicurazione, revisione e tagliando dei
           tuoi veicoli e ti avvisa con una notifica prima di ogni scadenza.
         </p>
+        {/* One action only: accounts are by invitation (ADR 0009), so inviting
+            a visitor to sign up would promise something the realm refuses. */}
         <div className={styles.actions}>
-          <Link to="/register" className="btn btn-primary">
-            Registrati
-          </Link>
-          <Link to="/login" className="btn btn-secondary">
+          <Link to="/login" className="btn btn-primary">
             Accedi
+          </Link>
+          <Link to="/info" className="btn btn-secondary">
+            Scopri il progetto
           </Link>
         </div>
         <p className={styles.repoLine}>

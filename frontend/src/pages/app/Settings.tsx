@@ -5,8 +5,8 @@ import { useState, type FormEvent } from 'react'
 import {
   DAYS_BEFORE_OPTIONS,
   mockNotificationPreferences,
-  mockUser,
 } from '../../mocks/user'
+import { useSession } from '../../auth/useSession'
 import styles from './Settings.module.css'
 
 /**
@@ -20,6 +20,7 @@ import styles from './Settings.module.css'
  * worker subscription, neither of which exists yet.
  */
 export function Settings() {
+  const { account } = useSession()
   const [pushEnabled, setPushEnabled] = useState(mockNotificationPreferences.pushEnabled)
   const [daysBefore, setDaysBefore] = useState(mockNotificationPreferences.daysBefore)
 
@@ -43,12 +44,14 @@ export function Settings() {
 
           <div className="field">
             <label htmlFor="name">Nome</label>
-            <input id="name" name="name" type="text" defaultValue={mockUser.name} />
+            {/* Read-only: name and email belong to the identity provider, and
+                changing them here would only create a second truth (ADR 0009). */}
+            <input id="name" name="name" type="text" value={account?.name ?? ''} readOnly />
           </div>
 
           <div className="field">
             <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" defaultValue={mockUser.email} />
+            <input id="email" name="email" type="email" value={account?.email ?? ''} readOnly />
           </div>
 
           <div className="field">

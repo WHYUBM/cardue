@@ -1,4 +1,8 @@
-import { DataSource } from 'typeorm';
+import { createHash, randomBytes } from 'node:crypto';
+import { DataSource, type EntityManager } from 'typeorm';
+import { SESSION_COOKIE } from '../src/auth/auth.constants.js';
+import { Session } from '../src/auth/entities/session.entity.js';
+import { User } from '../src/auth/entities/user.entity.js';
 import { buildDataSourceOptions } from '../src/database/data-source.js';
 
 /**
@@ -51,4 +55,37 @@ export async function createTestDataSource(): Promise<DataSource> {
   await dataSource.runMigrations();
 
   return dataSource;
+}
+
+/**
+ * Creates an account and an open session inside the test transaction, and
+ * returns the cookie that authenticates as that account.
+ *
+ * Rows are inserted directly rather than through the OIDC flow: an end-to-end
+ * test must not depend on Keycloak being up, and the flow itself is not what
+ * these tests are about (ADR 0009). What is exercised is everything after the
+ * session exists — the guard, and the ownership filtering in the services.
+ */
+export async function signIn(
+  manager: EntityManager,
+  email = 'e2e@example.com',
+): Promise<{ userId: string; cookie: string }> {
+  const user = await manager.save(
+    manager.create(User, { email, name: 'Utente E2E', keycloakSub: null }),
+  );
+
+  // Same shape the real sign-in produces: an opaque token in the cookie, only
+  // its hash in the table.
+  const token = randomBytes(32).toString('base64url');
+  await manager.save(
+    manager.create(Session, {
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      userId: user.id,
+      refreshToken: null,
+      lastSeenAt: new Date(),
+      expiresAt: new Date(Date.now() + 86_400_000),
+    }),
+  );
+
+  return { userId: user.id, cookie: `${SESSION_COOKIE}=${token}` };
 }

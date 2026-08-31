@@ -18,6 +18,14 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    // Vite rejects requests carrying a Host it does not know, as a defence
+    // against DNS rebinding. These entries are what let the PWA be tried from a
+    // phone through an HTTPS tunnel — the only way to get a secure context, and
+    // therefore a Service Worker, outside localhost. This applies to
+    // `vite preview` only, never to the build served in production.
+    allowedHosts: ['.trycloudflare.com', '.loca.lt', '.ngrok-free.app'],
+  },
   server: {
     proxy: {
       // Forwards /api to the NestJS backend so the browser only ever talks to

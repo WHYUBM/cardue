@@ -1,4 +1,6 @@
 import { DataSource, type DataSourceOptions } from 'typeorm';
+import { Session } from '../auth/entities/session.entity.js';
+import { User } from '../auth/entities/user.entity.js';
 import { Deadline } from '../vehicles/entities/deadline.entity.js';
 import { Vehicle } from '../vehicles/entities/vehicle.entity.js';
 import { migrations } from './migrations/index.js';
@@ -29,7 +31,7 @@ export function buildDataSourceOptions(
     // Entities are listed by class reference rather than by glob: under ESM the
     // path globs of TypeORM are a known source of trouble, and a missing class
     // here fails at compile time instead of at runtime (ADR 0006).
-    entities: [Vehicle, Deadline],
+    entities: [User, Session, Vehicle, Deadline],
     // Same rule for migrations, kept in order in `migrations/index.ts`.
     migrations,
 

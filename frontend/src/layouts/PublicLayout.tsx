@@ -18,11 +18,8 @@ export function PublicLayout() {
         </Link>
         <nav className={styles.nav} aria-label="Navigazione principale">
           <NavLink to="/info">Il progetto</NavLink>
-          <NavLink to="/login" className="btn btn-secondary">
+          <NavLink to="/login" className="btn btn-primary">
             Accedi
-          </NavLink>
-          <NavLink to="/register" className="btn btn-primary">
-            Registrati
           </NavLink>
         </nav>
       </header>

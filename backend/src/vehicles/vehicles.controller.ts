@@ -10,6 +10,8 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { User } from '../auth/entities/user.entity.js';
 import { CreateVehicleDto } from './dto/create-vehicle.dto.js';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto.js';
 import type { Vehicle } from './entities/vehicle.entity.js';
@@ -18,29 +20,35 @@ import { VehiclesService } from './vehicles.service.js';
 /**
  * Routes for the user's vehicles, under the global `/api` prefix.
  *
- * TODO: Every route is public. There is no session to scope them to yet, so a
- * client can read and change any vehicle. The guard goes here once
- * authentication exists.
+ * All of them require a session: the guard is global and nothing here is
+ * marked `@Public()`. The account arrives through `@CurrentUser()` and is
+ * passed down to the service, which is where ownership is actually enforced.
  */
 @Controller('vehicles')
 export class VehiclesController {
   constructor(private readonly vehicles: VehiclesService) {}
 
   @Post()
-  create(@Body() dto: CreateVehicleDto): Promise<Vehicle> {
-    return this.vehicles.create(dto);
+  create(
+    @CurrentUser() user: User,
+    @Body() dto: CreateVehicleDto,
+  ): Promise<Vehicle> {
+    return this.vehicles.create(user.id, dto);
   }
 
   @Get()
-  findAll(): Promise<Vehicle[]> {
-    return this.vehicles.findAll();
+  findAll(@CurrentUser() user: User): Promise<Vehicle[]> {
+    return this.vehicles.findAll(user.id);
   }
 
   // `ParseUUIDPipe` answers a malformed id with 400 instead of letting it reach
   // PostgreSQL, where an invalid uuid literal would come back as a 500.
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Vehicle> {
-    return this.vehicles.findOne(id);
+  findOne(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<Vehicle> {
+    return this.vehicles.findOne(user.id, id);
   }
 
   /**
@@ -49,15 +57,19 @@ export class VehiclesController {
    */
   @Patch(':id')
   update(
+    @CurrentUser() user: User,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateVehicleDto,
   ): Promise<Vehicle> {
-    return this.vehicles.update(id, dto);
+    return this.vehicles.update(user.id, id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    return this.vehicles.remove(id);
+  remove(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.vehicles.remove(user.id, id);
   }
 }

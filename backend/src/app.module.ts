@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { buildDataSourceOptions } from './database/data-source.js';
+import { AuthModule } from './auth/auth.module.js';
+import { SessionGuard } from './auth/session.guard.js';
 import { VehiclesModule } from './vehicles/vehicles.module.js';
 
 @Module({
@@ -41,9 +44,15 @@ import { VehiclesModule } from './vehicles/vehicles.module.js';
     TypeOrmModule.forRootAsync({
       useFactory: () => buildDataSourceOptions(process.env),
     }),
+    AuthModule,
     VehiclesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Registered globally so protection is the default: a new route is closed
+    // until someone marks it `@Public()`.
+    { provide: APP_GUARD, useClass: SessionGuard },
+  ],
 })
 export class AppModule {}

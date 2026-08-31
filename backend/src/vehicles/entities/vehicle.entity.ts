@@ -1,21 +1,22 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { User } from '../../auth/entities/user.entity.js';
 import { Deadline } from './deadline.entity.js';
 
 /**
  * A vehicle owned by the user, together with its deadlines.
  *
  * Mirrors `Vehicle` in `frontend/src/types/index.ts`.
- *
- * TODO: There is no owner column yet because authentication does not exist:
- * every vehicle currently belongs to everyone. Adding `user_id` will be its own
- * migration once there are accounts.
  */
 @Entity('vehicles')
 export class Vehicle {
@@ -43,6 +44,17 @@ export class Vehicle {
   @Column({ type: 'varchar', length: 10 })
   plate: string;
 
+  @Column({ name: 'user_id', type: 'uuid' })
+  @Index('idx_vehicle_user')
+  userId: string;
+
+  @ManyToOne(() => User, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
   /**
    * Odometer reading in kilometres.
    *
@@ -68,4 +80,15 @@ export class Vehicle {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  /**
+   * Tombstone (ADR 0010): a deleted row is kept, marked with the moment it went.
+   *
+   * Synchronisation needs to tell "this record never existed here" from "this
+   * record was deleted", otherwise a device that has not seen the deletion
+   * would helpfully put the row back. TypeORM leaves these rows out of every
+   * query on its own.
+   */
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt: Date | null;
 }

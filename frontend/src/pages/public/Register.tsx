@@ -1,73 +1,48 @@
 /**
- * Public sign-up page.
+ * Public page explaining that accounts are handed out, not created.
  */
-import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { loginUrl } from '../../lib/auth-api'
 import styles from './Auth.module.css'
 
 /**
- * Renders the sign-up form.
+ * Says why there is no sign-up form.
  *
- * MOCK: Like `Login`, submitting does nothing — there is no account creation
- * endpoint, and no client-side validation beyond the native input types.
+ * The route is kept rather than removed: it is linked from outside — a
+ * bookmark, an old message — and a page that explains is better than a 404 that
+ * leaves the visitor guessing.
+ *
+ * Access is by invitation (ADR 0009): the realm has self-registration switched
+ * off, so a form here could only fail. Concretely, an account is created for
+ * someone by hand in Keycloak.
  */
 export function Register() {
-  // MOCK: Inert handler — replace with the real sign-up request.
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-  }
-
   return (
     <div className={styles.wrapper}>
-      <h1 className={styles.title}>Crea il tuo account</h1>
+      <h1 className={styles.title}>L'accesso è su invito</h1>
       <p className={styles.intro}>
-        Bastano un'email e una password per iniziare a tracciare le scadenze.
+        Cardue è un progetto personale: gli account non si creano da soli, vengono
+        assegnati.
       </p>
 
-      <form className="card" onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="name">Nome</label>
-          <input id="name" type="text" name="name" autoComplete="name" />
-        </div>
-
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <input id="email" type="email" name="email" autoComplete="email" />
-        </div>
-
-        <div className="field">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            name="password"
-            autoComplete="new-password"
-          />
-          <span className="hint">Almeno 8 caratteri.</span>
-        </div>
-
-        <div className="field">
-          <label htmlFor="passwordConfirm">Conferma password</label>
-          <input
-            id="passwordConfirm"
-            type="password"
-            name="passwordConfirm"
-            autoComplete="new-password"
-          />
-        </div>
-
-        <button type="submit" className={`btn btn-primary ${styles.submit}`}>
-          Registrati
-        </button>
-
-        <p className={styles.note}>
-          Registrandoti accetti il <Link to="/disclaimer">disclaimer</Link>: i dati
-          mostrati sono indicativi.
+      <div className="card">
+        <p>
+          Se hai già ricevuto un invito, hai un account: accedi con la tua email e
+          la password che ti è stata comunicata, oppure con Google se l'hai
+          collegato.
         </p>
-      </form>
+        <p className="muted">
+          Se invece sei arrivato qui incuriosito, il codice del progetto è
+          pubblico: puoi installarne una tua copia.
+        </p>
 
-      <p className={styles.alt}>
-        Hai già un account? <Link to="/login">Accedi</Link>
+        <a className="btn btn-primary" href={loginUrl('/dashboard')}>
+          Accedi
+        </a>
+      </div>
+
+      <p className={styles.switch}>
+        Vuoi sapere di più sul progetto? <Link to="/info">Leggi qui</Link>
       </p>
     </div>
   )

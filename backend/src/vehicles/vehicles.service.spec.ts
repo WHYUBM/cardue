@@ -20,6 +20,7 @@ describe('VehiclesService', () => {
     find: ReturnType<typeof vi.fn>;
     findOne: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
+    softRemove: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -30,6 +31,7 @@ describe('VehiclesService', () => {
       find: vi.fn(),
       findOne: vi.fn(),
       delete: vi.fn(),
+      softRemove: vi.fn((entity: unknown) => Promise.resolve(entity)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -42,6 +44,9 @@ describe('VehiclesService', () => {
     service = module.get(VehiclesService);
   });
 
+  /** Stands in for the signed-in account; every call is scoped by it. */
+  const USER_ID = 'user-uuid';
+
   const baseVehicle = {
     make: 'Fiat',
     model: 'Panda',
@@ -51,20 +56,20 @@ describe('VehiclesService', () => {
 
   describe('create', () => {
     it('assumes a new vehicle when no odometer reading is sent', async () => {
-      const created = await service.create({ ...baseVehicle });
+      const created = await service.create(USER_ID, { ...baseVehicle });
 
       expect(created.mileageKm).toBe(DEFAULT_MILEAGE_KM);
       expect(created.mileageKm).toBe(0);
     });
 
     it('keeps the odometer reading when one is sent', async () => {
-      const created = await service.create({ ...baseVehicle, mileageKm: 78_400 });
+      const created = await service.create(USER_ID, { ...baseVehicle, mileageKm: 78_400 });
 
       expect(created.mileageKm).toBe(78_400);
     });
 
     it('attaches the deadlines sent with the vehicle', async () => {
-      const created = await service.create({
+      const created = await service.create(USER_ID, {
         ...baseVehicle,
         deadlines: [
           { type: 'bollo', dueDate: '2026-11-30' },
@@ -84,7 +89,7 @@ describe('VehiclesService', () => {
 
     it('rejects two deadlines of the same standard kind', async () => {
       await expect(
-        service.create({
+        service.create(USER_ID, {
           ...baseVehicle,
           deadlines: [
             { type: 'bollo', dueDate: '2026-11-30' },
@@ -97,7 +102,7 @@ describe('VehiclesService', () => {
 
   describe('create, custom deadlines', () => {
     it('keeps the title of a custom deadline', async () => {
-      const created = await service.create({
+      const created = await service.create(USER_ID, {
         ...baseVehicle,
         deadlines: [
           { type: 'custom', title: 'Gomme invernali', dueDate: '2026-11-15' },
@@ -114,7 +119,7 @@ describe('VehiclesService', () => {
     // The whole point of custom deadlines: unlike the standard kinds, a vehicle
     // may carry several of them.
     it('allows several custom deadlines on one vehicle', async () => {
-      const created = await service.create({
+      const created = await service.create(USER_ID, {
         ...baseVehicle,
         deadlines: [
           { type: 'custom', title: 'Gomme invernali', dueDate: '2026-11-15' },
@@ -127,7 +132,7 @@ describe('VehiclesService', () => {
 
     it('rejects a custom deadline without a title', async () => {
       await expect(
-        service.create({
+        service.create(USER_ID, {
           ...baseVehicle,
           deadlines: [{ type: 'custom', dueDate: '2026-11-15' }],
         }),
@@ -138,7 +143,7 @@ describe('VehiclesService', () => {
     // standard deadline is named after its type.
     it('rejects a title on a standard deadline', async () => {
       await expect(
-        service.create({
+        service.create(USER_ID, {
           ...baseVehicle,
           deadlines: [
             { type: 'bollo', title: 'Il mio bollo', dueDate: '2026-11-30' },
@@ -148,7 +153,7 @@ describe('VehiclesService', () => {
     });
 
     it('leaves the title null on standard deadlines', async () => {
-      const created = await service.create({
+      const created = await service.create(USER_ID, {
         ...baseVehicle,
         deadlines: [{ type: 'bollo', dueDate: '2026-11-30' }],
       });
@@ -168,7 +173,7 @@ describe('VehiclesService', () => {
     });
 
     it('updates the odometer on its own', async () => {
-      const updated = await service.update('a-uuid', { mileageKm: 82_000 });
+      const updated = await service.update(USER_ID, 'a-uuid', { mileageKm: 82_000 });
 
       expect(updated.mileageKm).toBe(82_000);
       expect(updated.make).toBe('Fiat');
@@ -177,7 +182,7 @@ describe('VehiclesService', () => {
     // The regression that matters: `PartialType` copies property initializers,
     // so a default on the create DTO would silently zero the odometer here.
     it('leaves the odometer alone when the payload omits it', async () => {
-      const updated = await service.update('a-uuid', { model: 'Panda 4x4' });
+      const updated = await service.update(USER_ID, 'a-uuid', { model: 'Panda 4x4' });
 
       expect(updated.mileageKm).toBe(78_400);
       expect(updated.model).toBe('Panda 4x4');
@@ -186,7 +191,7 @@ describe('VehiclesService', () => {
     it('reports a missing vehicle', async () => {
       repository.findOne.mockResolvedValue(null);
 
-      await expect(service.update('a-uuid', { mileageKm: 1 })).rejects.toThrow(
+      await expect(service.update(USER_ID, 'a-uuid', { mileageKm: 1 })).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -196,7 +201,7 @@ describe('VehiclesService', () => {
     it('reports a missing vehicle', async () => {
       repository.delete.mockResolvedValue({ affected: 0 });
 
-      await expect(service.remove('a-uuid')).rejects.toThrow(NotFoundException);
+      await expect(service.remove(USER_ID, 'a-uuid')).rejects.toThrow(NotFoundException);
     });
   });
 });

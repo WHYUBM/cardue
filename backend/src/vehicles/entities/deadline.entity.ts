@@ -1,10 +1,13 @@
 import {
   Column,
+  CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Vehicle } from './vehicle.entity.js';
 
@@ -64,9 +67,12 @@ export function isStandardDeadlineType(
 //
 // Custom deadlines are excluded through the partial index: their whole point is
 // that a vehicle can have several, told apart by their title.
+// `deleted_at IS NULL` is part of the condition, and it matters: without it a
+// deleted `bollo` would keep occupying the slot and the same kind could never
+// be added again.
 @Index('uq_deadline_vehicle_type', ['vehicleId', 'type'], {
   unique: true,
-  where: `type <> '${CUSTOM_DEADLINE_TYPE}'`,
+  where: `type <> '${CUSTOM_DEADLINE_TYPE}' AND deleted_at IS NULL`,
 })
 export class Deadline {
   @PrimaryGeneratedColumn('uuid')
@@ -117,4 +123,15 @@ export class Deadline {
    */
   @Column({ type: 'boolean', default: false })
   paused: boolean;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt: Date;
+
+  /** Needed by synchronisation to tell which version is the more recent. */
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
+
+  /** Tombstone; see the note on `Vehicle` (ADR 0010). */
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt: Date | null;
 }

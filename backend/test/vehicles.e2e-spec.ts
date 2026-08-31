@@ -5,9 +5,11 @@ import request from 'supertest';
 import { DataSource, QueryRunner } from 'typeorm';
 import { configureApp } from './../src/app-setup.js';
 import { AppModule } from './../src/app.module.js';
+import { Session } from './../src/auth/entities/session.entity.js';
+import { User } from './../src/auth/entities/user.entity.js';
 import { Deadline } from './../src/vehicles/entities/deadline.entity.js';
 import { Vehicle } from './../src/vehicles/entities/vehicle.entity.js';
-import { createTestDataSource } from './test-database.js';
+import { createTestDataSource, signIn } from './test-database.js';
 
 /**
  * End-to-end tests against a real database, each one rolled back.
@@ -30,6 +32,8 @@ describe('Vehicles (e2e)', () => {
   let dataSource: DataSource;
   let queryRunner: QueryRunner;
   let app: INestApplication;
+  /** Authenticates every request; the routes are all guarded now. */
+  let cookie: string;
 
   beforeAll(async () => {
     dataSource = await createTestDataSource();
@@ -51,10 +55,18 @@ describe('Vehicles (e2e)', () => {
       .useValue(queryRunner.manager.getRepository(Vehicle))
       .overrideProvider(getRepositoryToken(Deadline))
       .useValue(queryRunner.manager.getRepository(Deadline))
+      // The guard reads these two, and must read them inside the transaction
+      // as well, or it would not see the account created just below.
+      .overrideProvider(getRepositoryToken(User))
+      .useValue(queryRunner.manager.getRepository(User))
+      .overrideProvider(getRepositoryToken(Session))
+      .useValue(queryRunner.manager.getRepository(Session))
       .compile();
 
     app = configureApp(moduleFixture.createNestApplication());
     await app.init();
+
+    ({ cookie } = await signIn(queryRunner.manager));
   });
 
   afterEach(async () => {
@@ -74,6 +86,7 @@ describe('Vehicles (e2e)', () => {
     it('creates a vehicle, defaulting the odometer to zero', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send(validVehicle)
         .expect(201);
 
@@ -84,6 +97,7 @@ describe('Vehicles (e2e)', () => {
     it('stores the odometer reading when given', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({ ...validVehicle, mileageKm: 78_400 })
         .expect(201);
 
@@ -93,6 +107,7 @@ describe('Vehicles (e2e)', () => {
     it('creates the deadlines sent with the vehicle', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({
           ...validVehicle,
           deadlines: [{ type: 'bollo', dueDate: '2026-11-30' }],
@@ -109,6 +124,7 @@ describe('Vehicles (e2e)', () => {
     it('normalizes the plate to uppercase without spaces', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({ ...validVehicle, plate: ' gh456 kl ' })
         .expect(201);
 
@@ -118,6 +134,7 @@ describe('Vehicles (e2e)', () => {
     it('rejects a negative odometer reading', () => {
       return request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({ ...validVehicle, mileageKm: -1 })
         .expect(400);
     });
@@ -125,6 +142,7 @@ describe('Vehicles (e2e)', () => {
     it('rejects a date that does not exist', () => {
       return request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({
           ...validVehicle,
           deadlines: [{ type: 'bollo', dueDate: '2026-02-30' }],
@@ -137,6 +155,7 @@ describe('Vehicles (e2e)', () => {
     it('rejects an unknown property', () => {
       return request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({ ...validVehicle, owner: 'someone else' })
         .expect(400);
     });
@@ -146,6 +165,7 @@ describe('Vehicles (e2e)', () => {
     it('stores several custom deadlines with their titles', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({
           ...validVehicle,
           deadlines: [
@@ -168,6 +188,7 @@ describe('Vehicles (e2e)', () => {
     it('rejects a custom deadline without a title', () => {
       return request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({
           ...validVehicle,
           deadlines: [{ type: 'custom', dueDate: '2026-11-15' }],
@@ -178,6 +199,7 @@ describe('Vehicles (e2e)', () => {
     it('rejects a title longer than the column', () => {
       return request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({
           ...validVehicle,
           deadlines: [
@@ -192,6 +214,7 @@ describe('Vehicles (e2e)', () => {
     it('still rejects two deadlines of the same standard kind', () => {
       return request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({
           ...validVehicle,
           deadlines: [
@@ -207,11 +230,13 @@ describe('Vehicles (e2e)', () => {
     it('lists what has been created', async () => {
       await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send(validVehicle)
         .expect(201);
 
       const response = await request(app.getHttpServer())
         .get('/api/vehicles')
+        .set('Cookie', cookie)
         .expect(200);
 
       expect(response.body).toHaveLength(1);
@@ -221,6 +246,7 @@ describe('Vehicles (e2e)', () => {
     it('starts from an empty list, proving the previous test rolled back', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/vehicles')
+        .set('Cookie', cookie)
         .expect(200);
 
       expect(response.body).toEqual([]);
@@ -231,10 +257,12 @@ describe('Vehicles (e2e)', () => {
     it('updates the odometer on its own', async () => {
       const created = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({ ...validVehicle, mileageKm: 78_400 });
 
       const response = await request(app.getHttpServer())
         .patch(`/api/vehicles/${created.body.id}`)
+        .set('Cookie', cookie)
         .send({ mileageKm: 82_000 })
         .expect(200);
 
@@ -245,10 +273,12 @@ describe('Vehicles (e2e)', () => {
     it('leaves the odometer alone when the payload omits it', async () => {
       const created = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({ ...validVehicle, mileageKm: 78_400 });
 
       const response = await request(app.getHttpServer())
         .patch(`/api/vehicles/${created.body.id}`)
+        .set('Cookie', cookie)
         .send({ model: 'Panda 4x4' })
         .expect(200);
 
@@ -258,6 +288,7 @@ describe('Vehicles (e2e)', () => {
     it('answers 404 for a vehicle that does not exist', () => {
       return request(app.getHttpServer())
         .patch('/api/vehicles/00000000-0000-4000-8000-000000000000')
+        .set('Cookie', cookie)
         .send({ mileageKm: 1 })
         .expect(404);
     });
@@ -265,6 +296,7 @@ describe('Vehicles (e2e)', () => {
     it('answers 400 for a malformed id', () => {
       return request(app.getHttpServer())
         .patch('/api/vehicles/not-a-uuid')
+        .set('Cookie', cookie)
         .send({ mileageKm: 1 })
         .expect(400);
     });
@@ -274,6 +306,7 @@ describe('Vehicles (e2e)', () => {
     it('deletes the vehicle and its deadlines', async () => {
       const created = await request(app.getHttpServer())
         .post('/api/vehicles')
+        .set('Cookie', cookie)
         .send({
           ...validVehicle,
           deadlines: [{ type: 'bollo', dueDate: '2026-11-30' }],
@@ -281,10 +314,12 @@ describe('Vehicles (e2e)', () => {
 
       await request(app.getHttpServer())
         .delete(`/api/vehicles/${created.body.id}`)
+        .set('Cookie', cookie)
         .expect(204);
 
       await request(app.getHttpServer())
         .get(`/api/vehicles/${created.body.id}`)
+        .set('Cookie', cookie)
         .expect(404);
 
       const orphans = await queryRunner.manager.count(Deadline);

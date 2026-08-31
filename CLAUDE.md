@@ -37,24 +37,29 @@ Il **passo 3** della roadmap è concluso: lo scheletro cammina end-to-end in loc
   (ADR 0007); catalogo, utente e impostazioni restano su **mock hardcoded** in
   `src/mocks/`.
 
+**L'applicazione ha ora un'autenticazione reale.** Le rotte dell'area app sono
+protette, i veicoli hanno un proprietario, e Keycloak gestisce accesso, reset
+password e (una volta configurato) Google.
+
 **La fetta verticale è chiusa**: si crea un veicolo dal form, finisce in
 PostgreSQL, e la lista lo rilegge dal database. Il collegamento passa dal proxy
 `/api` di Vite, non da CORS.
 
-Restano fuori: autenticazione e route guard (le rotte dell'area app sono
-raggiungibili da chiunque, e i veicoli non hanno proprietario),
-PWA/manifest/Service Worker, push, Dockerfile e CI.
+Restano fuori: i dati offline (ADR 0010), le push, Dockerfile e CI.
 
 Il piano approvato per i prossimi passi, in ordine:
 
 1. ~~**PWA**~~ — fatta (ADR 0011): manifest, icone, Service Worker scritto a
    mano. L'app è installabile e il guscio si apre senza rete.
-2. **Autenticazione** con Keycloak in modalità BFF (ADR 0009). La migrazione che
-   introduce gli utenti deve **anche** portare i campi previsti da ADR 0010 —
-   `updatedAt` sulle scadenze, `deletedAt` per i tombstone, id generati dal
-   client — per non doverli aggiungere dopo con un backfill.
+2. ~~**Autenticazione**~~ — fatta (ADR 0009): Keycloak in modalità BFF,
+   sessione a cookie di 30 giorni scorrevoli, marcatore locale per l'apertura
+   offline, guard globale e filtro per proprietario nei servizi. La migrazione
+   ha portato anche i campi di ADR 0010 (`updatedAt` sulle scadenze,
+   `deletedAt` per i tombstone).
 3. **Local-first** vero (ADR 0010): IndexedDB come fonte di verità, coda delle
    operazioni, endpoint di sincronizzazione, scadenze come entità sincronizzate.
+   Manca ancora anche la generazione degli id lato client, che però non
+   richiede migrazioni.
 
 La derivazione delle attività di manutenzione dai chilometri resta più avanti:
 dipende da ADR 0004, ancora aperto.
@@ -122,6 +127,21 @@ Da sapere prima di toccare il codice:
   import relativi devono avere estensione **`.js`** anche se puntano a un `.ts`
   (`import { AppModule } from './app.module.js'`). Sbagliarlo compila ma esplode
   a runtime con `ERR_MODULE_NOT_FOUND`.
+- **Non esiste auto-registrazione** (ADR 0009): `/register` è una pagina che
+  spiega che l'accesso è su invito, non un form. Invitare qualcuno significa
+  creargli l'account nella console di Keycloak: **SMTP non è configurato**,
+  quindi non parte alcuna email — e per la stessa ragione «Password
+  dimenticata» compare ma non può recapitare nulla.
+- **La guard è globale**: ogni rotta è protetta salvo `@Public()`. Ma la guard
+  dice *chi sei*, non *cosa è tuo*: il filtro per `userId` sta nei **servizi**,
+  e ogni query dei veicoli lo applica. Un `findOne(id)` senza proprietario
+  consegnerebbe il veicolo di un altro a chi ne indovina l'identificatore.
+- **Nel frontend l'avvio non aspetta il server**: `session-marker.ts` decide
+  cosa mostrare subito, `/api/auth/me` conferma dopo. Invertire l'ordine
+  romperebbe l'apertura offline.
+- **Le cancellazioni sono logiche** (`softRemove`, ADR 0010): TypeORM esclude da
+  sé le righe con `deleted_at`. L'indice unico parziale delle scadenze lo tiene
+  in conto, altrimenti un bollo cancellato occuperebbe il posto per sempre.
 - **I test e2e usano un database dedicato** (`cardue_test`, creato e migrato da
   `test/test-database.ts`) e una transazione annullata per test. Non toccano
   `cardue`: se scrivi asserzioni sulle quantità, questa è la ragione per cui

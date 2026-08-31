@@ -27,10 +27,11 @@ export class VehiclesService {
    * The deadlines are saved by cascade in the same operation, so a payload
    * either lands whole or not at all.
    */
-  async create(dto: CreateVehicleDto): Promise<Vehicle> {
+  async create(userId: string, dto: CreateVehicleDto): Promise<Vehicle> {
     const deadlines = this.buildDeadlines(dto.deadlines);
 
     const vehicle = this.vehicles.create({
+      userId,
       make: dto.make,
       model: dto.model,
       year: dto.year,
@@ -43,14 +44,29 @@ export class VehiclesService {
     return this.vehicles.save(vehicle);
   }
 
-  /** Every vehicle, newest first. Deadlines come along, being eager. */
-  findAll(): Promise<Vehicle[]> {
-    return this.vehicles.find({ order: { createdAt: 'DESC' } });
+  /**
+   * The vehicles of one account, newest first. Deadlines come along, being
+   * eager.
+   *
+   * Every read and every write in this service is scoped by `userId`, and that
+   * is deliberate: the guard establishes *who* is asking, but only these
+   * queries decide *what* is theirs. A `findOne(id)` without the owner would
+   * hand any signed-in person someone else's vehicle for the price of guessing
+   * an identifier.
+   */
+  findAll(userId: string): Promise<Vehicle[]> {
+    return this.vehicles.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
-  async findOne(id: string): Promise<Vehicle> {
-    const vehicle = await this.vehicles.findOne({ where: { id } });
+  async findOne(userId: string, id: string): Promise<Vehicle> {
+    const vehicle = await this.vehicles.findOne({ where: { id, userId } });
     if (!vehicle) {
+      // Deliberately the same answer as a vehicle that does not exist:
+      // distinguishing them would confirm the existence of someone else's
+      // record to whoever guessed its identifier.
       throw new NotFoundException(`Vehicle ${id} not found`);
     }
     return vehicle;
@@ -64,8 +80,12 @@ export class VehiclesService {
    * replaces the whole set: the edit form always submits every kind, so a
    * missing kind means the user cleared it.
    */
-  async update(id: string, dto: UpdateVehicleDto): Promise<Vehicle> {
-    const vehicle = await this.findOne(id);
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateVehicleDto,
+  ): Promise<Vehicle> {
+    const vehicle = await this.findOne(userId, id);
 
     if (dto.make !== undefined) vehicle.make = dto.make;
     if (dto.model !== undefined) vehicle.model = dto.model;
@@ -80,12 +100,17 @@ export class VehiclesService {
     return this.vehicles.save(vehicle);
   }
 
-  async remove(id: string): Promise<void> {
-    // Deadlines go with it: the foreign key is ON DELETE CASCADE.
-    const result = await this.vehicles.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Vehicle ${id} not found`);
-    }
+  /**
+   * Removes a vehicle, leaving a tombstone (ADR 0010).
+   *
+   * `softRemove` rather than `delete`: a row that simply vanished would be put
+   * back by the first device that had not seen the deletion. The deadlines are
+   * marked with it because the relation cascades, and TypeORM keeps
+   * soft-deleted rows out of every subsequent query on its own.
+   */
+  async remove(userId: string, id: string): Promise<void> {
+    const vehicle = await this.findOne(userId, id);
+    await this.vehicles.softRemove(vehicle);
   }
 
   /**

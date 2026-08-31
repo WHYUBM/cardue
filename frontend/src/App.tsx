@@ -7,6 +7,7 @@
  * yet, because the bundle does not warrant it.
  */
 import { Route, Routes } from 'react-router'
+import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppLayout } from './layouts/AppLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { Disclaimer } from './pages/public/Disclaimer'
@@ -31,8 +32,9 @@ import { NotFound } from './pages/NotFound'
  * URL segments are in Italian because they are user-facing, matching the
  * interface language.
  *
- * TODO: The app branch has no access control — every route below `AppLayout`
- * is reachable by anyone. Add a route guard once real authentication exists.
+ * The app branch sits behind `ProtectedRoute`: without a session it redirects
+ * to the login page, carrying where it was going so the user comes back there
+ * (ADR 0009).
  */
 function App() {
   return (
@@ -50,25 +52,27 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Route>
 
-      <Route element={<AppLayout />}>
-        <Route path="dashboard" element={<Dashboard />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="dashboard" element={<Dashboard />} />
 
-        <Route path="veicoli">
-          <Route index element={<VehicleList />} />
-          {/* The static `nuovo` segment takes precedence over `:id`, so the
-              create form is never mistaken for a vehicle whose id is "nuovo". */}
-          <Route path="nuovo" element={<VehicleForm mode="create" />} />
-          <Route path=":id" element={<VehicleDetail />} />
-          <Route path=":id/modifica" element={<VehicleForm mode="edit" />} />
+          <Route path="veicoli">
+            <Route index element={<VehicleList />} />
+            {/* The static `nuovo` segment takes precedence over `:id`, so the
+                create form is never mistaken for a vehicle whose id is "nuovo". */}
+            <Route path="nuovo" element={<VehicleForm mode="create" />} />
+            <Route path=":id" element={<VehicleDetail />} />
+            <Route path=":id/modifica" element={<VehicleForm mode="edit" />} />
+          </Route>
+
+          <Route path="catalogo">
+            <Route index element={<Catalog />} />
+            <Route path="richiedi" element={<CatalogRequest />} />
+            <Route path="contribuisci" element={<CatalogContribute />} />
+          </Route>
+
+          <Route path="impostazioni" element={<Settings />} />
         </Route>
-
-        <Route path="catalogo">
-          <Route index element={<Catalog />} />
-          <Route path="richiedi" element={<CatalogRequest />} />
-          <Route path="contribuisci" element={<CatalogContribute />} />
-        </Route>
-
-        <Route path="impostazioni" element={<Settings />} />
       </Route>
     </Routes>
   )

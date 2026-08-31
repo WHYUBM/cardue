@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '../lib/api'
+import { clearSessionMarker } from '../lib/session-marker'
 
 /** What a page needs to render a remote resource in all of its states. */
 export interface ApiResource<T> {
@@ -74,6 +75,16 @@ export function useApiResource<T>(
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return
+
+        // The session expired, or was revoked, while the app was open. Drop the
+        // local marker and send the browser back through the guard, which will
+        // redirect to the sign-in page remembering where we were.
+        if (cause instanceof ApiError && cause.status === 401) {
+          clearSessionMarker()
+          window.location.reload()
+          return
+        }
+
         setState({
           key,
           data: null,

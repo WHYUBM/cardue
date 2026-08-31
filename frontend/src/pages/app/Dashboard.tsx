@@ -7,13 +7,13 @@ import { DeadlineRow } from '../../components/DeadlineRow'
 import { EmptyState } from '../../components/EmptyState'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
+import { useSession } from '../../auth/useSession'
 import { useVehicles } from '../../hooks/useVehicles'
 import {
   countNeedingAttention,
   getAllDeadlinesByUrgency,
   getDeadlineStatus,
 } from '../../lib/deadlines'
-import { mockUser } from '../../mocks/user'
 import type { DeadlineStatus, DeadlineWithVehicle } from '../../types'
 import styles from './Dashboard.module.css'
 
@@ -56,6 +56,7 @@ const SECTIONS: { key: string; title: string; hint: string; statuses: DeadlineSt
  * screen of the signed-in area.
  */
 export function Dashboard() {
+  const { account } = useSession()
   const { data, loading, error, reload } = useVehicles()
 
   // The aggregation stays client-side: the API returns whole vehicles with
@@ -81,8 +82,7 @@ export function Dashboard() {
     <>
       <div className="page-header">
         <div>
-          {/* MOCK: First name of the fixture user; there is no session yet. */}
-          <h1>Ciao {mockUser.name.split(' ')[0]}</h1>
+          <h1>Ciao {account?.name.split(' ')[0]}</h1>
           <p>
             {loading
               ? 'Caricamento delle scadenze…'

@@ -1,0 +1,48 @@
+{
+  "realm": "cardue",
+  "enabled": true,
+  "displayName": "Cardue",
+  "loginTheme": "keycloak",
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "it",
+    "en"
+  ],
+  "defaultLocale": "it",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 10,
+  "waitIncrementSeconds": 60,
+  "ssoSessionIdleTimeout": 2592000,
+  "ssoSessionMaxLifespan": 2592000,
+  "accessTokenLifespan": 300,
+  "clients": [
+    {
+      "clientId": "cardue-backend",
+      "name": "Cardue backend (BFF)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/api/auth/callback",
+        "http://localhost:4173/api/auth/callback",
+        "http://localhost:3000/api/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:4173"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:4173/*"
+      }
+    }
+  ]
+}

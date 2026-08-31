@@ -5,7 +5,7 @@
 # reverse proxy) arrives at roadmap step 5, together with the VPS deploy
 # (ADR 0002).
 #
-#   docker compose up -d      start the database in the background
+#   docker compose up -d      start the services in the background
 #   docker compose down       stop it, keeping the data
 #   docker compose down -v    stop it and drop the volume (schema is recreated)
 
@@ -36,6 +36,80 @@ services:
       timeout: 5s
       retries: 10
 
+  # Identity provider (ADR 0009). The backend is the OIDC client; the browser
+  # never talks to Keycloak except during the login redirect.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: cardue-keycloak
+    restart: unless-stopped
+    # `start-dev` runs without HTTPS and on an embedded H2 database, which is
+    # what a local machine needs. Production will use `start` against
+    # PostgreSQL, behind the reverse proxy that terminates TLS (ADR 0002).
+    command: ['start-dev', '--import-realm']
+    environment:
+      # Console administrator, for http://localhost:8080/admin. The defaults
+      # are a local convenience; a deployed instance must override them from
+      # the environment, because they are the keys to the identity provider.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HEALTH_ENABLED: 'true'
+    ports:
+      - '8080:8080'
+    volumes:
+      # Imported at first start only: once the realm exists in the database,
+      # editing this file changes nothing. Re-import needs `down -v`.
+      - ./keycloak/realm-cardue.json:/opt/keycloak/data/import/realm-cardue.json:ro
+      - keycloak-data:/opt/keycloak/data
+    healthcheck:
+      # The management port, 9000, is where Keycloak 26 exposes its health
+      # endpoints. The image has no shell utilities beyond bash, so the check
+      # opens a TCP connection through bash's own /dev/tcp.
+      test:
+        [
+          'CMD-SHELL',
+          'exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep -q UP <&3',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # Applies the part of the Keycloak configuration that depends on the
+  # environment or on secrets, and cannot therefore live in the versioned realm
+  # file: redirect URIs, client secret, Google credentials (ADR 0009).
+  #
+  # Runs once at every `docker compose up` and is idempotent, so a deploy always
+  # ends with the identity provider in the state the application expects.
+  keycloak-config:
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: cardue-keycloak-config
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    # One shot: it configures and exits.
+    restart: 'no'
+    entrypoint: ['bash', '/config/configure.sh']
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_USER: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KEYCLOAK_REALM: cardue
+      # Read from backend/.env below; declared here so a deploy can override
+      # them from the shell without touching that file.
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-cardue-backend}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # CARDUE_DEV_USER_* deliberately absent from this block: `environment`
+      # takes precedence over `env_file`, so declaring them here with an empty
+      # default would erase what backend/.env provides. They arrive from that
+      # file, and only from there — a server whose .env does not mention them
+      # simply grows no development account.
+    env_file: ./backend/.env
+    volumes:
+      - ./keycloak:/config:ro
+
 volumes:
   pgdata:
     name: cardue-pgdata
+  keycloak-data:
+    name: cardue-keycloak-data

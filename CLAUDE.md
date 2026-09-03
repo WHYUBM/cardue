@@ -201,8 +201,12 @@ Da sapere prima di toccare il codice:
   che serve il guscio in cache sotto la chiave `/`.
 - **Il Service Worker non gira in `npm run dev`**, solo nel build di produzione:
   per provarlo servono `npm run build && npm run preview`. E non deve mai
-  intercettare `/api/` — i dati offline sono compito di ADR 0010, non di una
-  cache HTTP.
+  intercettare `/api/` né `/idp/`: il primo perché i dati offline sono compito
+  di ADR 0010 e non di una cache HTTP, il secondo perché è Keycloak, che serve
+  pagine proprie. Entrambi sono di **stessa origine**, quindi senza il filtro il
+  worker risponde alla navigazione con il guscio dell'app e React Router mostra
+  «Pagina non trovata» sulla schermata di login. È successo davvero, al primo
+  accesso dal browser.
 - **Il deploy è un override, non un file a sé**: `docker compose -f
   docker-compose.yml -f docker-compose.deploy.yml`. Il secondo cambia solo ciò
   che sul server è diverso, e usa il tag `!reset` per togliere le porte

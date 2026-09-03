@@ -7,9 +7,10 @@
  * immutable and can be cached forever, while the document that references them
  * must always be checked against the network first.
  *
- * What it does NOT do: cache `/api/`. The data of a signed-in user has no place
- * in a cache shared by whoever uses the device, and offline data is the job of
- * ADR 0010, which puts it in IndexedDB with proper reconciliation.
+ * What it does NOT do: touch anything the server owns. `/api/` because the data
+ * of a signed-in user has no place in a cache shared by whoever uses the device
+ * — offline data is the job of ADR 0010, which puts it in IndexedDB with proper
+ * reconciliation — and `/idp/` because Keycloak serves its own pages there.
  */
 
 /// <reference lib="webworker" />
@@ -24,7 +25,18 @@ const worker = self as unknown as ServiceWorkerGlobalScope
  * The name is the whole cache-invalidation mechanism: a new version means a new
  * cache, and `activate` deletes the previous ones.
  */
-const CACHE_NAME = 'cardue-v1'
+const CACHE_NAME = 'cardue-v2'
+
+/**
+ * Path prefixes that belong to the server, not to the application shell.
+ *
+ * They are same-origin, so without this list they would fall into the
+ * navigation branch below and be answered with `index.html`. For `/idp/` that
+ * is not a theoretical concern: it is the login page of Keycloak, and serving
+ * the shell in its place makes React Router render "page not found" on a URL
+ * that was never its own. It happened on the first sign-in from the browser.
+ */
+const SERVER_PATHS = ['/api/', '/idp/']
 
 /**
  * The bare minimum for the app to start with no network.
@@ -77,8 +89,9 @@ worker.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   if (url.origin !== worker.location.origin) return
 
-  // The API goes straight to the network, always. See the note at the top.
-  if (url.pathname.startsWith('/api/')) return
+  // Whatever the server owns goes straight to the network, always: the API and
+  // the identity provider. See SERVER_PATHS.
+  if (SERVER_PATHS.some((prefix) => url.pathname.startsWith(prefix))) return
 
   if (request.mode === 'navigate') {
     event.respondWith(handleDocument())
@@ -96,6 +109,11 @@ worker.addEventListener('fetch', (event) => {
  * `/`. That is what makes a deep link such as `/veicoli/1` open offline: the
  * path never reaches the network, React Router resolves it once the shell has
  * booted.
+ *
+ * The flip side is that this function answers *every* navigation with the
+ * shell, whatever the URL — which is correct only for paths the application
+ * owns. Everything else has to be filtered out before getting here, which is
+ * what SERVER_PATHS does.
  *
  * Network first — rather than cache first — is what lets a deployed update
  * appear immediately for anyone online, without waiting for a new worker.

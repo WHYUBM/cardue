@@ -30,3 +30,4 @@ stato scelto e — soprattutto — **perché**.
 | 0009 | [Autenticazione con Keycloak, in modalità BFF](0009-autenticazione-con-keycloak-bff.md) | Accettato |
 | 0010 | [Local-first con sincronizzazione](0010-local-first-con-sincronizzazione.md) | Accettato |
 | 0011 | [PWA e Service Worker scritto a mano](0011-pwa-e-service-worker-scritto-a-mano.md) | Accettato |
+| 0012 | [Ambiente di sviluppo condiviso su Proxmox](0012-ambiente-di-sviluppo-su-proxmox.md) | Accettato |

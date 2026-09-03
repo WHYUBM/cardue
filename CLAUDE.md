@@ -45,7 +45,15 @@ password e (una volta configurato) Google.
 PostgreSQL, e la lista lo rilegge dal database. Il collegamento passa dal proxy
 `/api` di Vite, non da CORS.
 
-Restano fuori: i dati offline (ADR 0010), le push, Dockerfile e CI.
+**L'applicazione ha un ambiente di sviluppo condiviso** (ADR 0012): una VM
+Proxmox in casa, raggiungibile solo dal tailnet all'indirizzo
+`cardue-dev.<tailnet>.ts.net`, con l'intero stack in Docker — frontend
+compilato e servito da Caddy, backend, due PostgreSQL, Keycloak in modalità di
+produzione. È lì che la PWA si prova per quello che è: HTTPS valido, indirizzo
+stabile, installazione sul telefono che sopravvive. I comandi stanno in
+`docs/deploy.md`.
+
+Restano fuori: i dati offline (ADR 0010), le push e la CI.
 
 Il piano approvato per i prossimi passi, in ordine:
 
@@ -67,10 +75,11 @@ dipende da ADR 0004, ancora aperto.
 ## ⚠️ Decisioni NON ancora finalizzate
 
 Lo stack è chiuso: gli ADR 0001, 0002, 0003, 0005, 0006, 0007, 0008, 0009,
-0010 e 0011 sono **Accettati** (React+Vite, NestJS, PostgreSQL, Web Push, deploy su VPS
+0010, 0011 e 0012 sono **Accettati** (React+Vite, NestJS, PostgreSQL, Web Push, deploy su VPS
 con Docker, routing con React Router, accesso ai dati con TypeORM, data fetching
 con `fetch` a mano, autenticazione con Keycloak in modalità BFF, architettura
-local-first). Su queste scelte puoi costruire senza chiedere conferma.
+local-first, ambiente di sviluppo su Proxmox via Tailscale). Su queste scelte
+puoi costruire senza chiedere conferma.
 
 Resta aperta una decisione:
 
@@ -97,6 +106,8 @@ e aggiorna l'ADR (o creane uno nuovo) una volta deciso, allineando l'indice in
 - PWA: manifest + Service Worker scritto a mano, nessun plugin — *accettato* (ADR 0011)
 - Notifiche: Web Push (VAPID) + cron giornaliero — *accettato*
 - Deploy: VPS Aruba + Docker Compose, reverse proxy con HTTPS — *accettato*
+- Ambiente di sviluppo condiviso: VM Proxmox + Docker Compose + Caddy, esposto
+  solo nel tailnet Tailscale — *accettato* (ADR 0012)
 - CI/CD: GitHub Actions — previsto più avanti
 
 ## Struttura e toolchain
@@ -192,6 +203,23 @@ Da sapere prima di toccare il codice:
   per provarlo servono `npm run build && npm run preview`. E non deve mai
   intercettare `/api/` — i dati offline sono compito di ADR 0010, non di una
   cache HTTP.
+- **Il deploy è un override, non un file a sé**: `docker compose -f
+  docker-compose.yml -f docker-compose.deploy.yml`. Il secondo cambia solo ciò
+  che sul server è diverso, e usa il tag `!reset` per togliere le porte
+  pubblicate dal primo — un `ports:` normale si sarebbe *aggiunto*, non
+  sostituito.
+- **Ci sono due `.env`, con ruoli diversi.** Quello di root serve a Compose
+  *mentre interpreta* i file (nome pubblico, indirizzo Tailscale, password);
+  `backend/.env` è ciò che finisce *dentro* i container. Aggiungendo una
+  variabile, il posto giusto dipende da chi deve leggerla.
+- **Il nome di host del server compare in quattro punti** — `PUBLIC_HOSTNAME`,
+  `KEYCLOAK_ISSUER_URL`, `APP_BASE_URL` e il certificato — e devono coincidere
+  esattamente. È la causa prima di un login che gira a vuoto.
+- **Sul server il backend chiama Keycloak al suo indirizzo pubblico in HTTPS**,
+  e ci riesce perché quel nome è un alias di rete del container Caddy. Non
+  sostituirlo con `http://keycloak:8080` per comodità: `oidc.service.ts` non
+  verifica la firma dell'id token e si appoggia proprio a quel certificato per
+  sapere chi ha risposto.
 
 ## Convenzioni
 
@@ -215,8 +243,10 @@ Da sapere prima di toccare il codice:
 
 Walking skeleton: prima una fetta end-to-end minima ma reale, poi le feature.
 Non introdurre strumenti o astrazioni in anticipo rispetto al bisogno.
-Sviluppo e test **in locale** finché lo scheletro non gira; il VPS si tocca solo
-al passo 5 della roadmap (per non consumare inutilmente il credito Aruba).
+Sviluppo e test **in locale**; la VM Proxmox (ADR 0012) è dove l'applicazione
+si usa e si prova sul telefono, non dove la si scrive. Il **VPS Aruba** resta
+intoccato finché non serve servire qualcuno fuori dal tailnet: il suo credito
+ha una scadenza temporale, e accenderlo prima significa consumarlo a vuoto.
 
 ## Vincoli da ricordare
 
@@ -234,6 +264,7 @@ al passo 5 della roadmap (per non consumare inutilmente il credito Aruba).
 
 - Panoramica, stack e roadmap: `README.md`
 - Decisioni e motivazioni: `docs/adr/`
+- Deploy sull'ambiente di sviluppo condiviso: `docs/deploy.md`
 - Analisi tecnica file per file: `PROJECT_DOCS.md` — living document **locale,
   non versionato**; va riallineato quando la struttura del codice cambia.
 
@@ -241,5 +272,11 @@ al passo 5 della roadmap (per non consumare inutilmente il credito Aruba).
 
 - `backend/package.json` dichiara `"license": "UNLICENSED"`, ma il progetto è MIT.
 - `frontend/.gitignore` duplica regole già presenti nel `.gitignore` di root.
+- In `docker-compose.yml` il servizio `keycloak-config` dichiara
+  `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` in `environment` con default vuoto:
+  siccome `environment` ha la precedenza su `env_file`, i valori messi in
+  `backend/.env` vengono sovrascritti dalla stringa vuota e Google non si
+  collega. Vanno tolti da lì (come già fatto per `CARDUE_DEV_USER_*`) il giorno
+  in cui si configura Google.
 - Nessun code splitting per rotta nel frontend: tutte le pagine finiscono in un
   unico bundle (`React.lazy` quando il peso lo giustificherà).

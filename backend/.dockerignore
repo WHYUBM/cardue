@@ -1,0 +1,8 @@
+node_modules
+dist
+test
+coverage
+*.tsbuildinfo
+# Never bake the secrets into an image: the environment arrives from compose.
+.env
+.env.*

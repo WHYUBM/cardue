@@ -27,10 +27,11 @@ coverage/
 *.lcov
 
 # --- Variabili d'ambiente e segreti ---
-# NB: .env.example va invece committato
+# NB: gli .env.example vanno invece committati
 .env
 .env.*
 !.env.example
+!.env.*.example
 *.pem
 *.key
 *.p12

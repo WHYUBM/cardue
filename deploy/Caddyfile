@@ -1,0 +1,69 @@
+# Reverse proxy of the deploy stack (ADR 0012).
+#
+# Everything the browser asks for arrives here, on a single origin: the API,
+# the identity provider and the frontend. One origin is what removes CORS and
+# lets the frontend keep using relative paths, exactly as the Vite proxy does
+# in local development (ADR 0007).
+#
+# Mounted read-only from the repository, so editing a route is a
+# `docker compose restart web`, not a rebuild.
+{
+	# Nothing on this machine reconfigures Caddy at runtime, and an admin API
+	# listening on a container port is one open socket with no purpose.
+	admin off
+}
+
+https://{$PUBLIC_HOSTNAME} {
+	# The certificate comes from Tailscale, through the tailscaled socket
+	# mounted into this container: a real, publicly trusted certificate for the
+	# .ts.net name, renewed without a cron job and — the point — without any
+	# ACME challenge, so the machine never has to be reachable from the
+	# internet. HTTPS is not a nicety here: without it there is no Service
+	# Worker, no installable PWA and no Web Push.
+	tls {
+		get_certificate tailscale
+	}
+
+	encode zstd gzip
+
+	# The application's own API.
+	handle /api/* {
+		reverse_proxy backend:3000
+	}
+
+	# Keycloak, which lives under /idp (KC_HTTP_RELATIVE_PATH). Deliberately a
+	# different prefix from /api/auth: that one is the *application's* session,
+	# this one is the identity provider behind it (ADR 0009). Keeping the
+	# provider off the root also leaves /realms, /admin and /js free for the
+	# frontend's own routes.
+	handle /idp/* {
+		reverse_proxy keycloak:8080 {
+			# TLS ends here, so without these Keycloak would see a plain HTTP
+			# request and build its redirect URLs on http://, sending the
+			# browser back on the wrong scheme mid-login.
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Port 443
+		}
+	}
+
+	# Everything else is the built frontend.
+	handle {
+		root * /srv
+
+		# The shell and the worker must never be served stale: they are what
+		# decides which version of everything else the browser gets (ADR 0011).
+		# A cached sw.js means a deploy that never arrives.
+		@shell path / /index.html /sw.js /manifest.webmanifest
+		header @shell Cache-Control "no-cache"
+
+		# The hashed assets are the opposite case: a new build gives them new
+		# names, so the old ones can be cached for as long as the browser likes.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		# Unknown paths get the shell, because BrowserRouter owns them: without
+		# this, a refresh on /veicoli/1 is a 404 from the file server.
+		try_files {path} /index.html
+		file_server
+	}
+}

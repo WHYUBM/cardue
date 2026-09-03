@@ -56,10 +56,12 @@ fonti ufficiali.
 | Database   | PostgreSQL                     |
 | Notifiche  | Web Push (VAPID) + scheduler   |
 | Deploy     | VPS Aruba + Docker Compose     |
+| Sviluppo   | VM Proxmox in casa, via Tailscale |
 | CI/CD      | GitHub Actions                 |
 
 Le scelte tecniche e le motivazioni sono documentate negli
-[Architecture Decision Records](docs/adr/README.md).
+[Architecture Decision Records](docs/adr/README.md). Come si porta l'applicazione
+sull'ambiente di sviluppo condiviso è descritto in [docs/deploy.md](docs/deploy.md).
 
 Il criterio che le guida è la **longevità**: un progetto personale mantenuto da
 una persona sola deve poter restare fermo per mesi e ripartire senza sorprese.

@@ -1,0 +1,162 @@
+# Deploy stack for the shared development environment on Proxmox (ADR 0012).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d --build
+#
+# or simply `deploy/deploy.sh`, which is that line plus a `git pull`.
+#
+# This file is an *override* of docker-compose.yml, not a replacement: db,
+# keycloak and keycloak-config come from there and only what the server needs
+# differently is written here. The variables it interpolates (PUBLIC_HOSTNAME,
+# TAILSCALE_IP, the passwords) come from the `.env` at the root of the
+# repository — see .env.example. What ends up *inside* the backend containers
+# comes instead from backend/.env, as in development.
+#
+# Requires Docker Compose 2.24 or newer, for the `!reset` tag below.
+
+services:
+  # On a server the database is reachable from the other containers and from
+  # nowhere else. `!reset` removes the mapping the base file publishes: a
+  # `ports:` written here would be *appended* to it, not replace it.
+  db:
+    ports: !reset null
+
+  # Keycloak's own database, separate from the application's.
+  #
+  # In development Keycloak keeps its realm in an embedded H2 file, which
+  # production mode refuses to use. Rather than sharing the application's
+  # instance, it gets its own: the two have nothing to say to each other, and
+  # a `pg_dump` of the application stays a dump of the application.
+  keycloak-db:
+    image: postgres:18-alpine
+    container_name: cardue-keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?serve KEYCLOAK_DB_PASSWORD in .env}
+      POSTGRES_DB: keycloak
+    volumes:
+      # Same caveat as the application's database: since PostgreSQL 18 the
+      # mount goes on /var/lib/postgresql, not on the /data subdirectory.
+      - keycloak-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keycloak -d keycloak']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    ports: !reset null
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    # `start` instead of `start-dev`. The difference that matters is not
+    # performance: production mode stops Keycloak from guessing its own address
+    # from the incoming request, and makes it use KC_HOSTNAME instead. That is
+    # what puts the login redirect on the public HTTPS name rather than on the
+    # container's internal one.
+    command: ['start', '--import-realm']
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?serve KEYCLOAK_DB_PASSWORD in .env}
+
+      # The public address, path included. It must agree with the relative path
+      # below, and with KEYCLOAK_ISSUER_URL in backend/.env: they are three
+      # copies of one fact, and Keycloak fails loudly when they disagree.
+      KC_HOSTNAME: https://${PUBLIC_HOSTNAME:?serve PUBLIC_HOSTNAME in .env}/idp
+      KC_HTTP_RELATIVE_PATH: /idp
+      # TLS is terminated by Caddy, so the container itself speaks plain HTTP
+      # on a network no one else is on.
+      KC_HTTP_ENABLED: 'true'
+      KC_PROXY_HEADERS: xforwarded
+      # Left at the root explicitly: the management port carries the health
+      # endpoint the base file's healthcheck calls, and it would otherwise
+      # inherit the /idp prefix and answer 404 forever.
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+
+  keycloak-config:
+    environment:
+      # kcadm needs the prefix too, or it looks for the master realm one level
+      # above where it now lives.
+      KEYCLOAK_URL: http://keycloak:8080/idp
+
+  # Schema migrations, as a container that runs once and exits.
+  #
+  # Kept out of the application's startup on purpose: an app that migrates on
+  # boot migrates again at every restart and at every replica, and a failure
+  # there looks like a crash loop instead of a failed migration.
+  migrate:
+    build: ./backend
+    image: cardue-backend:local
+    container_name: cardue-migrate
+    restart: 'no'
+    env_file: ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    # Split between entrypoint and command so the container doubles as the
+    # handle for the other migration subcommands:
+    #   docker compose ... run --rm --no-deps migrate migration:show
+    #   docker compose ... run --rm --no-deps migrate migration:revert
+    entrypoint:
+      ['node', './node_modules/typeorm/cli.js', '-d', 'dist/database/data-source.js']
+    command: ['migration:run']
+
+  backend:
+    build: ./backend
+    image: cardue-backend:local
+    container_name: cardue-backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Not published on the host: the only way in is through Caddy.
+    expose:
+      - '3000'
+
+  # The built frontend and the reverse proxy, in one container (see
+  # frontend/Dockerfile).
+  web:
+    build: ./frontend
+    image: cardue-web:local
+    container_name: cardue-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - keycloak
+    environment:
+      # Read by the Caddyfile as {$PUBLIC_HOSTNAME}.
+      PUBLIC_HOSTNAME: ${PUBLIC_HOSTNAME:?serve PUBLIC_HOSTNAME in .env}
+    ports:
+      # Bound to the Tailscale address and to that alone: on 0.0.0.0 the whole
+      # application, identity provider included, would also answer on the home
+      # LAN, on a certificate that does not match.
+      - '${TAILSCALE_IP:?serve TAILSCALE_IP in .env}:443:443'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      # How Caddy obtains the .ts.net certificate: it asks the tailscaled
+      # running on the host, over its socket. Read-write because the local API
+      # is a socket, not a file to read.
+      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
+    networks:
+      default:
+        aliases:
+          # This is the piece that makes the backend able to call Keycloak at
+          # its *public* URL from inside Docker: the name resolves here, to
+          # Caddy, which holds the matching certificate. Without it the backend
+          # would either fail to resolve the .ts.net name — MagicDNS does not
+          # reach into containers — or have to talk to the identity provider
+          # over plain HTTP, which is precisely the assumption oidc.service.ts
+          # relies on not being broken.
+          - ${PUBLIC_HOSTNAME:?serve PUBLIC_HOSTNAME in .env}
+
+volumes:
+  keycloak-db-data:
+    name: cardue-keycloak-db-data
+  caddy-data:
+    name: cardue-caddy-data

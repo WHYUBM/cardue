@@ -136,6 +136,11 @@ services:
       # application, identity provider included, would also answer on the home
       # LAN, on a certificate that does not match.
       - '${TAILSCALE_IP:?serve TAILSCALE_IP in .env}:443:443'
+      # Port 80 carries nothing but Caddy's redirect to HTTPS. Without it a
+      # browser given the bare host name — which is what anyone types — tries
+      # http:// first and gets a connection refused, with no hint that the site
+      # is one scheme away.
+      - '${TAILSCALE_IP:?serve TAILSCALE_IP in .env}:80:80'
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
